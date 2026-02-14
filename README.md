@@ -51,5 +51,5 @@
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/your-username/crm-project.git
-   cd crm-project
+   git clone https://github.com/freeway96/CRM-Diplom
+   cd CRM-Diplom
