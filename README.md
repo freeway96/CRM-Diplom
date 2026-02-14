@@ -8,6 +8,7 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
 
+[![Build Status](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml/badge.svg)](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml)
 ---
 
 ## 📝 Описание проекта
