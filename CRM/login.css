@@ -1,0 +1,57 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-header {
+  position: static;
+}
+
+.login-main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.login-section {
+  width: min(460px, 100%);
+}
+
+.login-card {
+  background: linear-gradient(180deg, var(--surface), var(--surface-soft));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 34px rgba(19, 24, 29, 0.12);
+  padding: 1.2rem;
+}
+
+.login-card h1 {
+  margin-bottom: 0.55rem;
+  font-size: clamp(1.7rem, 3.2vw, 2.2rem);
+}
+
+.login-text {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+.login-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.login-form .btn {
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 640px) {
+  .login-main {
+    padding-top: 1.2rem;
+  }
+
+  .login-card {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Вход в CRM | ООО «ХПК»</title>
+  <meta name="description" content="Вход в CRM-систему ООО «ХПК» для сотрудников предприятия." />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body class="login-page">
+  <header class="header login-header">
+    <div class="container header-row">
+      <a class="brand" href="../index.html" aria-label="ООО ХПК">
+        <span class="brand-mark">ХПК</span>
+        <span class="brand-text">CRM-система предприятия</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="login-main">
+    <section class="login-section">
+      <div class="login-card">
+        <p class="kicker">Внутренний доступ</p>
+        <h1>Вход в CRM</h1>
+        <p class="login-text">Доступ предоставляется только сотрудникам ООО «ХПК». Регистрация в системе отключена.</p>
+
+        <form class="login-form" action="#" method="post" autocomplete="on">
+          <label>
+            Логин
+            <input type="text" name="username" placeholder="Введите логин" required autocomplete="username" />
+          </label>
+          <label>
+            Пароль
+            <input type="password" name="password" placeholder="Введите пароль" required autocomplete="current-password" />
+          </label>
+          <button class="btn btn-fill" type="submit">Войти</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
