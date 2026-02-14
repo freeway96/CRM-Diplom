@@ -53,3 +53,15 @@
    ```bash
    git clone https://github.com/freeway96/CRM-Diplom
    cd CRM-Diplom
+
+2. Запуск репозитория:
+    ```bash
+    docker compose up -d
+    docker compose ps
+
+Все три контейнера должны быть в статусе ``up``
+
+3. Открой браузер и перейди по ссылке 
+
+- Сайт: http://localhost:8080
+- phpMyAdmin: http://localhost:8081

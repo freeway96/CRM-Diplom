@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Фронтенд
+  frontend:
+    build: .
+    container_name: crm-frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - crm-network
+
+    depends_on:
+     - database
+
+  # База данных MariaDB
+  database:
+    image: mariadb:10.11 
+    container_name: crm-database
+    environment:
+      # Обязательные параметры
+      MARIADB_ROOT_PASSWORD: new_password  # Пароль для root
+      MARIADB_DATABASE: crm_db                 # Имя создаваемой БД
+      MARIADB_USER: crm_user                    # Имя пользователя
+      MARIADB_PASSWORD: 123456789       # Пароль пользователя
+      
+      # Дополнительные настройки
+      MARIADB_ROOT_HOST: '%'                     # Разрешить подключения root с любого хоста
+    ports:
+      - "3307:3306"  # Стандартный порт MySQL/MariaDB
+    volumes:
+      - mariadb_data:/var/lib/mysql              # Храним данные БД в томе
+      # Если есть начальный SQL-скрипт для создания таблиц:
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - crm-network
+    restart: unless-stopped
+    # Проверка здоровья базы данных 
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+    # phpMyAdmin для удобного управления БД
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: crm-phpmyadmin
+    environment:
+      PMA_HOST: database           # Имя сервиса БД
+      PMA_PORT: 3306
+      PMA_USER: crm_user           # Логин для авто-входа (можно оставить пустым)
+      PMA_PASSWORD: 123456789    # Пароль для авто-входа
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "8081:80"  # phpMyAdmin будет доступен на порту 8081
+    networks:
+      - crm-network
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy 
+
+# Сети для связи контейнеров
+networks:
+  crm-network:
+    driver: bridge
+
+# Тома для хранения данных БД
+volumes:
+  mariadb_data:
+    driver: local
