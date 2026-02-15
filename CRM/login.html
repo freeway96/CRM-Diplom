@@ -24,19 +24,21 @@
         <p class="kicker">Внутренний доступ</p>
         <h1>Вход в CRM</h1>
         
-        <form class="login-form" action="#" method="post" autocomplete="on">
+        <form class="login-form" action="#" method="post" autocomplete="on" data-login-form>
           <label>
             Логин
-            <input type="text" name="username" placeholder="Введите логин" required autocomplete="username" />
+            <input type="text" name="username" placeholder="Введите логин" required autocomplete="username" data-login-input />
           </label>
           <label>
             Пароль
-            <input type="password" name="password" placeholder="Введите пароль" required autocomplete="current-password" />
+            <input type="password" name="password" placeholder="Введите пароль" required autocomplete="current-password" data-password-input />
           </label>
+          <p class="login-message" data-login-message aria-live="polite"></p>
           <button class="btn btn-fill" type="submit">Войти</button>
         </form>
       </div>
     </section>
   </main>
+  <script src="login.js" defer></script>
 </body>
 </html>

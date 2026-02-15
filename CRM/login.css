@@ -46,6 +46,21 @@
   margin-top: 0.4rem;
 }
 
+.login-message {
+  min-height: 1.25rem;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.login-message.is-error {
+  color: #d73a49;
+}
+
+.login-message.is-success {
+  color: #2f8f4e;
+}
+
 @media (max-width: 640px) {
   .login-main {
     padding-top: 1.2rem;
