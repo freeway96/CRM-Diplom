@@ -7,8 +7,9 @@
   <meta name="description" content="Рабочий кабинет CRM ООО «ХПК»." />
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="login.css" />
+  <link rel="stylesheet" href="dashboard.css" />
 </head>
-<body class="login-page">
+<body class="dashboard-page">
   <header class="header login-header">
     <div class="container header-row">
       <a class="brand" href="../index.html" aria-label="ООО ХПК">
@@ -19,46 +20,132 @@
     </div>
   </header>
 
-  <main class="login-main">
-    <section class="login-section">
-      <div class="login-card">
-        <p class="kicker">Рабочая зона</p>
-        <h1>Вы вошли в CRM</h1>
-        <p class="login-text" data-user-info></p>
+  <main class="dashboard-main">
+    <section class="container dashboard-shell">
+      <aside class="dashboard-sidebar">
+        <p class="kicker">Разделы CRM</p>
+        <button class="tab-btn is-active" type="button" data-tab-btn data-tab-target="overview">Дашборд</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="clients">Клиенты</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">Сделки</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Работники</button>
+      </aside>
+
+      <div class="dashboard-content">
+        <section class="dashboard-panel is-active" data-tab-panel="overview">
+          <p class="kicker">Главная</p>
+          <h1>Дашборд CRM</h1>
+          <p class="login-text" data-user-info></p>
+          <p class="login-message" data-dashboard-message aria-live="polite"></p>
+          <div class="stats-grid dashboard-stats" data-overview-cards></div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="clients">
+          <p class="kicker">Справочник</p>
+          <h2>Клиенты</h2>
+          <form class="entity-form" data-client-form>
+            <input type="text" name="name" placeholder="Название клиента" required />
+            <input type="text" name="contact" placeholder="Контактное лицо" required />
+            <input type="tel" name="phone" placeholder="+7..." required />
+            <button class="btn btn-fill" type="submit">Добавить клиента</button>
+          </form>
+          <div class="table-wrap">
+            <table class="entity-table">
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Контакт</th>
+                  <th>Телефон</th>
+                  <th>Сделок</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-clients-body></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="deals">
+          <p class="kicker">Операции</p>
+          <h2>Сделки</h2>
+          <form class="entity-form deal-form" data-deal-form>
+            <select name="clientId" required data-client-select>
+              <option value="">Выберите клиента</option>
+            </select>
+            <select name="workerId" required data-worker-select>
+              <option value="">Ответственный сотрудник</option>
+            </select>
+            <input type="number" min="0" step="1000" name="amount" placeholder="Сумма (руб.)" required />
+            <select name="status" required>
+              <option value="new">Новая</option>
+              <option value="in_progress">В работе</option>
+              <option value="won">Завершена</option>
+              <option value="lost">Отменена</option>
+            </select>
+            <button class="btn btn-fill" type="submit">Добавить сделку</button>
+          </form>
+          <div class="table-wrap">
+            <table class="entity-table">
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Ответственный</th>
+                  <th>Сумма</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-deals-body></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="progress">
+          <p class="kicker">Аналитика</p>
+          <h2>Учет сколько сделано</h2>
+          <div class="stats-grid dashboard-stats" data-progress-cards></div>
+          <div class="table-wrap">
+            <table class="entity-table">
+              <thead>
+                <tr>
+                  <th>Сотрудник</th>
+                  <th>Сделки (всего)</th>
+                  <th>Завершено</th>
+                  <th>Выручка (закрытые)</th>
+                </tr>
+              </thead>
+              <tbody data-performance-body></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="workers">
+          <p class="kicker">Команда</p>
+          <h2>Учет работников</h2>
+          <form class="entity-form" data-worker-form>
+            <input type="text" name="name" placeholder="ФИО сотрудника" required />
+            <input type="text" name="role" placeholder="Должность" required />
+            <button class="btn btn-fill" type="submit">Добавить сотрудника</button>
+          </form>
+          <div class="table-wrap">
+            <table class="entity-table">
+              <thead>
+                <tr>
+                  <th>Сотрудник</th>
+                  <th>Должность</th>
+                  <th>Назначено сделок</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-workers-body></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
   </main>
 
-  <script>
-    (() => {
-      const SESSION_KEY = "crm_auth_user";
-      const userInfo = document.querySelector("[data-user-info]");
-      const logoutBtn = document.querySelector("[data-logout-btn]");
-      const raw = sessionStorage.getItem(SESSION_KEY);
-
-      if (!raw) {
-        window.location.replace("login.html");
-        return;
-      }
-
-      try {
-        const user = JSON.parse(raw);
-        if (userInfo) {
-          userInfo.textContent = "Пользователь: " + (user.user || user.login || "Неизвестно");
-        }
-      } catch (error) {
-        sessionStorage.removeItem(SESSION_KEY);
-        window.location.replace("login.html");
-        return;
-      }
-
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-          sessionStorage.removeItem(SESSION_KEY);
-          window.location.replace("login.html");
-        });
-      }
-    })();
-  </script>
+  <script src="dashboard.js" defer></script>
 </body>
 </html>

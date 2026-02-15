@@ -10,6 +10,29 @@ services:
 
     depends_on:
      - database
+     - backend
+
+  backend:
+    image: php:8.2-apache
+    container_name: crm-backend
+    environment:
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: crm_db
+      DB_USER: crm_user
+      DB_PASSWORD: 123456789
+    volumes:
+      - ./api:/var/www/html/api
+    ports:
+      - "8084:80"
+    networks:
+      - crm-network
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    command: >
+      bash -lc "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
 
   # База данных MariaDB
   database:
