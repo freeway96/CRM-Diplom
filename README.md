@@ -67,11 +67,14 @@
 - Сайт: http://localhost:8080
 - phpMyAdmin: http://localhost:8081
 
-Обновление файлов в Docker:
-
+4. Обновление файлов в Docker:
     ```bash 
         docker compose down
         git pull
         docker compose up -d
-
 Все выполняется в папке проекта
+
+5. Режим разработчика:
+    ```bash
+    docker compose -f docker-compose.dev.yml up -d
+    docker compose -f docker-compose.dev.yml down
