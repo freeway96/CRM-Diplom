@@ -2,13 +2,16 @@
 
 > Дипломный проект Лачугина Ивана Дмитриевича, группа ИС(б)-21
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-
-[![Build Status](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml/badge.svg)](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml)
+  [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/ru/docs/Web/HTML)
+  [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/ru/docs/Web/CSS)
+  [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/ru/docs/Web/JavaScript)
+  [![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
+  [![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)](https://mariadb.org/)
+  [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+  [![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)](https://nginx.org/)
+  
+  [![Build Status](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml/badge.svg)](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml)
+  [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-1.2k-blue)](https://hub.docker.com/r/freeway96/crm-diplom)
 ---
 
 ## 📝 Описание проекта
@@ -36,6 +39,8 @@
 | HTML5      | Структура веб-страниц |
 | CSS3       | Стилизация и адаптивность |
 | JavaScript | Логика фронтенда, взаимодействие с пользователем |
+| PHP        | Backend API для CRM |
+| SQL (MariaDB/MySQL) | Хранение данных CRM и запросы к БД |
 | Docker     | Контейнеризация приложения |
 | Nginx      | Веб-сервер для раздачи статических файлов |
 
