@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Кабинет | ООО «ХПК»</title>
   <meta name="description" content="Рабочий кабинет CRM ООО «ХПК»." />
+  <link rel="icon" href="/favicon.ico" />
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="login.css" />
-  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="dashboard.css?v=20260216-layout2" />
 </head>
 <body class="dashboard-page">
   <header class="header login-header">
@@ -29,6 +30,7 @@
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">Сделки</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Работники</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="attendance">Табель</button>
       </aside>
 
       <div class="dashboard-content">
@@ -43,12 +45,9 @@
         <section class="dashboard-panel" data-tab-panel="clients">
           <p class="kicker">Справочник</p>
           <h2>Клиенты</h2>
-          <form class="entity-form" data-client-form>
-            <input type="text" name="name" placeholder="Название клиента" required />
-            <input type="text" name="contact" placeholder="Контактное лицо" required />
-            <input type="tel" name="phone" placeholder="+7..." required />
-            <button class="btn btn-fill" type="submit">Добавить клиента</button>
-          </form>
+          <div class="section-actions">
+            <button class="btn btn-fill" type="button" data-create-client>Создать клиента</button>
+          </div>
           <div class="table-wrap">
             <table class="entity-table">
               <thead>
@@ -68,28 +67,15 @@
         <section class="dashboard-panel" data-tab-panel="deals">
           <p class="kicker">Операции</p>
           <h2>Сделки</h2>
-          <form class="entity-form deal-form" data-deal-form>
-            <select name="clientId" required data-client-select>
-              <option value="">Выберите клиента</option>
-            </select>
-            <select name="workerId" required data-worker-select>
-              <option value="">Ответственный сотрудник</option>
-            </select>
-            <input type="number" min="0" step="1000" name="amount" placeholder="Сумма (руб.)" required />
-            <select name="status" required>
-              <option value="new">Новая</option>
-              <option value="in_progress">В работе</option>
-              <option value="won">Завершена</option>
-              <option value="lost">Отменена</option>
-            </select>
-            <button class="btn btn-fill" type="submit">Добавить сделку</button>
-          </form>
+          <div class="section-actions">
+            <button class="btn btn-fill" type="button" data-create-deal>Создать сделку</button>
+          </div>
           <div class="table-wrap">
             <table class="entity-table">
               <thead>
                 <tr>
+                  <th>Заказ</th>
                   <th>Клиент</th>
-                  <th>Ответственный</th>
                   <th>Сумма</th>
                   <th>Статус</th>
                   <th>Дата</th>
@@ -104,48 +90,119 @@
         <section class="dashboard-panel" data-tab-panel="progress">
           <p class="kicker">Аналитика</p>
           <h2>Учет сколько сделано</h2>
-          <div class="stats-grid dashboard-stats" data-progress-cards></div>
-          <div class="table-wrap">
-            <table class="entity-table">
-              <thead>
-                <tr>
-                  <th>Сотрудник</th>
-                  <th>Сделки (всего)</th>
-                  <th>Завершено</th>
-                  <th>Выручка (закрытые)</th>
-                </tr>
-              </thead>
-              <tbody data-performance-body></tbody>
-            </table>
+          <div class="stack-layout">
+            <div class="subpanel">
+              <h3>Добавление выпуска</h3>
+              <div class="section-actions">
+                <button class="btn btn-fill" type="button" data-create-production>Добавить выпуск</button>
+              </div>
+            </div>
+            <div class="subpanel">
+              <h3>Просмотр выпуска</h3>
+              <form class="entity-form compact-form" data-production-filter-form>
+                <input type="date" name="productionDate" data-production-date required />
+                <button class="btn btn-line" type="submit">Показать день</button>
+              </form>
+              <div class="stats-grid dashboard-stats progress-single-stat" data-progress-cards></div>
+              <div class="table-wrap">
+                <table class="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Сотрудник</th>
+                      <th>Изделие</th>
+                      <th>Количество, шт</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody data-productions-body></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
         <section class="dashboard-panel" data-tab-panel="workers">
           <p class="kicker">Команда</p>
           <h2>Учет работников</h2>
-          <form class="entity-form" data-worker-form>
-            <input type="text" name="name" placeholder="ФИО сотрудника" required />
-            <input type="text" name="role" placeholder="Должность" required />
-            <button class="btn btn-fill" type="submit">Добавить сотрудника</button>
-          </form>
-          <div class="table-wrap">
-            <table class="entity-table">
-              <thead>
-                <tr>
-                  <th>Сотрудник</th>
-                  <th>Должность</th>
-                  <th>Назначено сделок</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody data-workers-body></tbody>
-            </table>
+          <div class="stack-layout">
+            <div class="subpanel">
+              <h3>Добавление сотрудника</h3>
+              <div class="stats-grid dashboard-stats workers-stats">
+                <article>
+                  <strong data-workers-total>0</strong>
+                  <p>Всего сотрудников</p>
+                </article>
+              </div>
+              <div class="section-actions">
+                <button class="btn btn-fill" type="button" data-create-worker>Добавить сотрудника</button>
+              </div>
+            </div>
+            <div class="subpanel">
+              <h3>Список сотрудников</h3>
+              <div class="table-wrap">
+                <table class="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Сотрудник</th>
+                      <th>Должность</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody data-workers-body></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="attendance">
+          <p class="kicker">Команда</p>
+          <h2>Табель посещаемости</h2>
+          <div class="stack-layout">
+            <div class="subpanel">
+              <h3>Заполнение табеля</h3>
+              <div class="section-actions">
+                <button class="btn btn-fill" type="button" data-create-attendance>Заполнить табель</button>
+              </div>
+            </div>
+            <div class="subpanel">
+              <h3>Просмотр табеля</h3>
+              <form class="entity-form compact-form" data-attendance-filter-form>
+                <input type="date" name="attendanceDate" data-attendance-date required />
+                <button class="btn btn-line" type="submit">Показать день</button>
+              </form>
+              <div class="table-wrap">
+                <table class="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Сотрудник</th>
+                      <th>Статус</th>
+                      <th>Сверхурочно, ч</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody data-attendance-body></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
       </div>
     </section>
   </main>
 
-  <script src="dashboard.js" defer></script>
+  <div class="modal-overlay" data-edit-modal hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 data-edit-title>Редактирование</h3>
+        <button class="btn btn-line btn-small" type="button" data-edit-close>Закрыть</button>
+      </div>
+      <form class="modal-form" data-edit-form></form>
+    </div>
+  </div>
+
+  <script src="dashboard.js?v=20260216-ui1" defer></script>
 </body>
 </html>
