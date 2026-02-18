@@ -46,6 +46,33 @@
 
 ---
 
+## 📁 Структура проекта
+
+```text
+CRM-Diplom/
+├── frontend/
+│   └── public/
+│       ├── index.html
+│       ├── styles.css
+│       ├── script.js
+│       ├── favicon.ico
+│       ├── CRM/
+│       └── assets/
+├── backend/
+│   └── api/
+│       ├── bootstrap.php
+│       ├── login.php
+│       └── crm.php
+├── database/
+│   └── sql/
+│       └── login.sql
+├── docker-compose.yml
+├── docker-compose.dev.yml
+└── Dockerfile
+```
+
+---
+
 ## 🚀 Запуск проекта
 
 ### Предварительные требования
@@ -71,6 +98,7 @@
 
 - Сайт: http://localhost:8080
 - phpMyAdmin: http://localhost:8081
+- API: http://localhost:8084/api/crm.php
 
 4. Обновление файлов в Docker:
     ```bash 

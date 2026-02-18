@@ -1,16 +1,17 @@
 services:
-  # Фронтенд
   frontend:
-    image: freeway96/crm-diplom:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: crm-diplom-frontend:local
     ports:
       - "8080:80"
     restart: unless-stopped
     networks:
       - crm-network
-
     depends_on:
-     - database
-     - backend
+      - database
+      - backend
 
   backend:
     image: php:8.2-apache
@@ -22,7 +23,7 @@ services:
       DB_USER: crm_user
       DB_PASSWORD: 123456789
     volumes:
-      - ./api:/var/www/html/api
+      - ./backend/api:/var/www/html/api
     ports:
       - "8084:80"
     networks:
@@ -34,46 +35,40 @@ services:
     command: >
       bash -lc "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
 
-  # База данных MariaDB
   database:
-    image: mariadb:10.11 
+    image: mariadb:10.11
     container_name: crm-database
     environment:
       # Обязательные параметры
-      MARIADB_ROOT_PASSWORD: new_password  # Пароль для root
-      MARIADB_DATABASE: crm_db                 # Имя создаваемой БД
-      MARIADB_USER: crm_user                    # Имя пользователя
-      MARIADB_PASSWORD: 123456789       # Пароль пользователя
-      
-      # Дополнительные настройки
-      MARIADB_ROOT_HOST: '%'                     # Разрешить подключения root с любого хоста
+      MARIADB_ROOT_PASSWORD: new_password
+      MARIADB_DATABASE: crm_db
+      MARIADB_USER: crm_user
+      MARIADB_PASSWORD: 123456789
+      MARIADB_ROOT_HOST: "%"
     ports:
-      - "3307:3306"  # Стандартный порт MySQL/MariaDB
+      - "3307:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql              # Храним данные БД в томе
-      # Если есть начальный SQL-скрипт для создания таблиц:
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mariadb_data:/var/lib/mysql
+      - ./database/sql:/docker-entrypoint-initdb.d:ro
     networks:
       - crm-network
     restart: unless-stopped
-    # Проверка здоровья базы данных 
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 10s
       retries: 5
 
-    # phpMyAdmin для удобного управления БД
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: crm-phpmyadmin
     environment:
-      PMA_HOST: database           # Имя сервиса БД
+      PMA_HOST: database
       PMA_PORT: 3306
-      PMA_USER: crm_user           # Логин для авто-входа (можно оставить пустым)
-      PMA_PASSWORD: 123456789    # Пароль для авто-входа
+      PMA_USER: crm_user
+      PMA_PASSWORD: 123456789
       UPLOAD_LIMIT: 100M
     ports:
-      - "8081:80"  # phpMyAdmin будет доступен на порту 8081
+      - "8081:80"
     networks:
       - crm-network
     restart: unless-stopped
@@ -81,12 +76,10 @@ services:
       database:
         condition: service_healthy 
 
-# Сети для связи контейнеров
 networks:
   crm-network:
     driver: bridge
 
-# Тома для хранения данных БД
 volumes:
   mariadb_data:
     driver: local

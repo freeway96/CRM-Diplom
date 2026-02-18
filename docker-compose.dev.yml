@@ -1,11 +1,11 @@
 services:
   frontend:
-    image: freeway96/crm-diplom:latest
+    image: nginx:alpine
     container_name: crm-frontend-dev
     ports:
       - "8082:80"
     volumes:
-      - ./:/usr/share/nginx/html
+      - ./frontend/public:/usr/share/nginx/html
     networks:
       - crm-network-dev
 
@@ -21,7 +21,7 @@ services:
     ports:
       - "8084:80"
     volumes:
-      - ./api:/var/www/html/api
+      - ./backend/api:/var/www/html/api
     networks:
       - crm-network-dev
     depends_on:
@@ -41,7 +41,8 @@ services:
     ports:
       - "3308:3306"
     volumes:
-      - mariadb_data_dev:/var/lib/mysql  
+      - mariadb_data_dev:/var/lib/mysql
+      - ./database/sql:/docker-entrypoint-initdb.d:ro
     networks:
       - crm-network-dev
     healthcheck:
