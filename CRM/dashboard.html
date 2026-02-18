@@ -29,21 +29,19 @@
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="clients">Клиенты</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">Сделки</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Работники</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Сотрудники</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="attendance">Табель</button>
       </aside>
 
       <div class="dashboard-content">
         <section class="dashboard-panel is-active" data-tab-panel="overview">
-          <p class="kicker">Главная</p>
-          <h1>Дашборд CRM</h1>
+          <h1>Дашборд</h1>
           <p class="login-text" data-user-info></p>
           <p class="login-message" data-dashboard-message aria-live="polite"></p>
           <div class="stats-grid dashboard-stats" data-overview-cards></div>
         </section>
 
         <section class="dashboard-panel" data-tab-panel="clients">
-          <p class="kicker">Справочник</p>
           <h2>Клиенты</h2>
           <div class="section-actions">
             <button class="btn btn-fill" type="button" data-create-client>Создать клиента</button>
@@ -65,7 +63,6 @@
         </section>
 
         <section class="dashboard-panel" data-tab-panel="deals">
-          <p class="kicker">Операции</p>
           <h2>Сделки</h2>
           <div class="section-actions">
             <button class="btn btn-fill" type="button" data-create-deal>Создать сделку</button>
@@ -88,8 +85,7 @@
         </section>
 
         <section class="dashboard-panel" data-tab-panel="progress">
-          <p class="kicker">Аналитика</p>
-          <h2>Учет сколько сделано</h2>
+          <h2>Учет</h2>
           <div class="stack-layout">
             <div class="subpanel">
               <h3>Добавление выпуска</h3>
@@ -103,7 +99,6 @@
                 <input type="date" name="productionDate" data-production-date required />
                 <button class="btn btn-line" type="submit">Показать день</button>
               </form>
-              <div class="stats-grid dashboard-stats progress-single-stat" data-progress-cards></div>
               <div class="table-wrap">
                 <table class="entity-table">
                   <thead>
@@ -123,8 +118,7 @@
         </section>
 
         <section class="dashboard-panel" data-tab-panel="workers">
-          <p class="kicker">Команда</p>
-          <h2>Учет работников</h2>
+          <h2>Сотрудники</h2>
           <div class="stack-layout">
             <div class="subpanel">
               <h3>Добавление сотрудника</h3>
@@ -157,8 +151,7 @@
         </section>
 
         <section class="dashboard-panel" data-tab-panel="attendance">
-          <p class="kicker">Команда</p>
-          <h2>Табель посещаемости</h2>
+          <h2>Табель</h2>
           <div class="stack-layout">
             <div class="subpanel">
               <h3>Заполнение табеля</h3>
@@ -179,7 +172,7 @@
                       <th>Дата</th>
                       <th>Сотрудник</th>
                       <th>Статус</th>
-                      <th>Сверхурочно, ч</th>
+                      <th>Отработано, ч</th>
                       <th></th>
                     </tr>
                   </thead>
