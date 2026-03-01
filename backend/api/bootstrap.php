@@ -163,15 +163,47 @@ function ensure_schema(PDO $pdo): void
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS productions (
             id INT NOT NULL AUTO_INCREMENT,
-            worker_id INT NOT NULL,
             product_name VARCHAR(140) NOT NULL,
             quantity INT NOT NULL DEFAULT 0,
             produced_date DATE NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            KEY idx_productions_date (produced_date),
-            KEY idx_productions_worker (worker_id),
-            CONSTRAINT fk_productions_worker FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE
+            KEY idx_productions_date (produced_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
     ");
+
+    $productionWorkerColumnExists = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'productions' AND COLUMN_NAME = 'worker_id'
+    ")->fetch()["cnt"] ?? 0);
+    if ($productionWorkerColumnExists > 0) {
+        $fkStmt = $pdo->query("
+            SELECT DISTINCT k.CONSTRAINT_NAME
+            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+            WHERE k.TABLE_SCHEMA = DATABASE()
+              AND k.TABLE_NAME = 'productions'
+              AND k.COLUMN_NAME = 'worker_id'
+              AND k.REFERENCED_TABLE_NAME IS NOT NULL
+        ");
+        foreach ($fkStmt->fetchAll(PDO::FETCH_COLUMN) as $constraintName) {
+            $safeConstraint = str_replace("`", "``", (string) $constraintName);
+            $pdo->exec("ALTER TABLE productions DROP FOREIGN KEY `{$safeConstraint}`");
+        }
+
+        $idxStmt = $pdo->query("
+            SELECT DISTINCT s.INDEX_NAME
+            FROM INFORMATION_SCHEMA.STATISTICS s
+            WHERE s.TABLE_SCHEMA = DATABASE()
+              AND s.TABLE_NAME = 'productions'
+              AND s.COLUMN_NAME = 'worker_id'
+              AND s.INDEX_NAME <> 'PRIMARY'
+        ");
+        foreach ($idxStmt->fetchAll(PDO::FETCH_COLUMN) as $indexName) {
+            $safeIndex = str_replace("`", "``", (string) $indexName);
+            $pdo->exec("ALTER TABLE productions DROP INDEX `{$safeIndex}`");
+        }
+
+        $pdo->exec("ALTER TABLE productions DROP COLUMN worker_id");
+    }
 }

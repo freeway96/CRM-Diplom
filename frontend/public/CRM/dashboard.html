@@ -104,7 +104,6 @@
                   <thead>
                     <tr>
                       <th>Дата</th>
-                      <th>Сотрудник</th>
                       <th>Изделие</th>
                       <th>Количество, шт</th>
                       <th></th>
@@ -158,6 +157,11 @@
               <div class="section-actions">
                 <button class="btn btn-fill" type="button" data-create-attendance>Заполнить табель</button>
               </div>
+              <h3>Отчет за месяц</h3>
+              <form class="entity-form compact-form" data-attendance-report-form>
+                <input type="month" name="attendanceMonth" data-attendance-report-month required />
+                <button class="btn btn-line" type="submit" data-download-attendance-report>Создать отчет</button>
+              </form>
             </div>
             <div class="subpanel">
               <h3>Просмотр табеля</h3>
@@ -172,7 +176,7 @@
                       <th>Дата</th>
                       <th>Сотрудник</th>
                       <th>Статус</th>
-                      <th>Отработано, ч</th>
+                      <th>Сверхурочно, ч</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -196,6 +200,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=20260216-ui1" defer></script>
+  <script src="dashboard.js?v=20260302-ui4" defer></script>
 </body>
 </html>

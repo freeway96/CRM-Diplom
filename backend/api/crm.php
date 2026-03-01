@@ -12,8 +12,75 @@ $entity = (string) ($_GET["entity"] ?? "");
 $id = isset($_GET["id"]) ? (int) $_GET["id"] : 0;
 $attendanceDate = trim((string) ($_GET["attendance_date"] ?? ""));
 $productionDate = trim((string) ($_GET["production_date"] ?? ""));
+$reportMonth = trim((string) ($_GET["month"] ?? ""));
 
 if ($method === "GET") {
+    if ($entity === "attendance_report") {
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $reportMonth)) {
+            json_response(["ok" => false, "message" => "Некорректный месяц. Используйте формат ГГГГ-ММ."], 400);
+        }
+
+        $startDate = $reportMonth . "-01";
+        $endDate = date("Y-m-t", strtotime($startDate));
+
+        $stmt = $pdo->prepare("
+            SELECT
+                w.name AS worker_name,
+                COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END), 0) AS present_days,
+                COALESCE(SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END), 0) AS absent_days,
+                COALESCE(SUM(CASE WHEN a.status = 'sick' THEN 1 ELSE 0 END), 0) AS sick_days,
+                COALESCE(SUM(CASE WHEN a.status = 'vacation' THEN 1 ELSE 0 END), 0) AS vacation_days,
+                COALESCE(SUM(a.overtime_hours), 0) AS overtime_hours,
+                COALESCE(SUM(CASE WHEN a.status = 'present' THEN 8 ELSE 0 END + a.overtime_hours), 0) AS worked_hours
+            FROM workers w
+            LEFT JOIN attendance a
+              ON a.worker_id = w.id
+             AND a.work_date BETWEEN :start_date AND :end_date
+            GROUP BY w.id, w.name
+            ORDER BY w.name ASC
+        ");
+        $stmt->execute([
+            ":start_date" => $startDate,
+            ":end_date" => $endDate,
+        ]);
+        $rows = $stmt->fetchAll();
+
+        header("Content-Type: text/csv; charset=utf-8");
+        header("Content-Disposition: attachment; filename=\"attendance_report_{$reportMonth}.csv\"");
+        $output = fopen("php://output", "wb");
+        if ($output === false) {
+            json_response(["ok" => false, "message" => "Не удалось сформировать файл отчета."], 500);
+        }
+
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, [
+            "Сотрудник",
+            "Месяц",
+            "Дней на смене",
+            "Дней отсутствовал",
+            "Дней больничный",
+            "Дней отпуск",
+            "Сверхурочно (ч)",
+            "Отработано (ч)",
+        ], ";");
+
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                (string) ($row["worker_name"] ?? ""),
+                $reportMonth,
+                (string) (int) ($row["present_days"] ?? 0),
+                (string) (int) ($row["absent_days"] ?? 0),
+                (string) (int) ($row["sick_days"] ?? 0),
+                (string) (int) ($row["vacation_days"] ?? 0),
+                number_format((float) ($row["overtime_hours"] ?? 0), 2, ".", ""),
+                number_format((float) ($row["worked_hours"] ?? 0), 2, ".", ""),
+            ], ";");
+        }
+
+        fclose($output);
+        exit;
+    }
+
     $clients = $pdo->query("SELECT id, name, contact, phone, created_at FROM clients ORDER BY id DESC")->fetchAll();
     $workers = $pdo->query("SELECT id, name, role, created_at FROM workers ORDER BY id DESC")->fetchAll();
     $deals = $pdo->query("
@@ -41,7 +108,7 @@ if ($method === "GET") {
 
     if ($productionDate !== "") {
         $stmt = $pdo->prepare("
-            SELECT id, worker_id, product_name, quantity, produced_date, created_at
+            SELECT id, product_name, quantity, produced_date, created_at
             FROM productions
             WHERE produced_date = :produced_date
             ORDER BY id DESC
@@ -50,7 +117,7 @@ if ($method === "GET") {
         $productions = $stmt->fetchAll();
     } else {
         $productions = $pdo->query("
-            SELECT id, worker_id, product_name, quantity, produced_date, created_at
+            SELECT id, product_name, quantity, produced_date, created_at
             FROM productions
             ORDER BY id DESC
         ")->fetchAll();
@@ -203,21 +270,19 @@ if ($method === "POST") {
     }
 
     if ($entity === "productions") {
-        $workerId = (int) ($input["workerId"] ?? 0);
         $productName = trim((string) ($input["productName"] ?? ""));
         $quantity = (int) ($input["quantity"] ?? 0);
         $producedDate = trim((string) ($input["producedDate"] ?? ""));
 
-        if ($workerId <= 0 || $productName === "" || $quantity <= 0 || $producedDate === "") {
+        if ($productName === "" || $quantity <= 0 || $producedDate === "") {
             json_response(["ok" => false, "message" => "Некорректные данные по изделиям."], 400);
         }
 
         $stmt = $pdo->prepare("
-            INSERT INTO productions (worker_id, product_name, quantity, produced_date)
-            VALUES (:worker_id, :product_name, :quantity, :produced_date)
+            INSERT INTO productions (product_name, quantity, produced_date)
+            VALUES (:product_name, :quantity, :produced_date)
         ");
         $stmt->execute([
-            ":worker_id" => $workerId,
             ":product_name" => $productName,
             ":quantity" => $quantity,
             ":produced_date" => $producedDate,

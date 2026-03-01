@@ -32,6 +32,7 @@
   const createProductionBtn = q("[data-create-production]");
 
   const attendanceFilterForm = q("[data-attendance-filter-form]");
+  const attendanceReportForm = q("[data-attendance-report-form]");
   const productionFilterForm = q("[data-production-filter-form]");
 
   const clientsBody = q("[data-clients-body]");
@@ -45,6 +46,7 @@
   const workersTotalEl = q("[data-workers-total]");
 
   const attendanceDateInput = q("[data-attendance-date]");
+  const attendanceReportMonthInput = q("[data-attendance-report-month]");
   const productionDateInput = q("[data-production-date]");
 
   const editModal = q("[data-edit-modal]");
@@ -114,12 +116,24 @@
   };
 
   const todayISO = new Date().toISOString().slice(0, 10);
+  const currentMonth = todayISO.slice(0, 7);
   const filters = {
     attendanceDate: todayISO,
     productionDate: todayISO,
   };
 
+  const normalizeReportMonth = (rawValue) => {
+    const value = String(rawValue || "").trim();
+    if (/^\d{4}-\d{2}$/.test(value)) return value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.slice(0, 7);
+    return "";
+  };
+
   if (attendanceDateInput) attendanceDateInput.value = filters.attendanceDate;
+  if (attendanceReportMonthInput) {
+    attendanceReportMonthInput.type = "month";
+    attendanceReportMonthInput.value = currentMonth;
+  }
   if (productionDateInput) productionDateInput.value = filters.productionDate;
 
   let state = {
@@ -477,7 +491,6 @@
     openEditModal({
       title: "Добавление выпуска",
       html: `
-        <select name="workerId" required>${workerOptionsHtml("", "Сотрудник")}</select>
         <input type="text" name="productName" placeholder="Изделие" required />
         <input type="number" min="1" step="1" name="quantity" placeholder="Количество, шт" required />
         <input type="date" name="producedDate" value="${filters.productionDate}" required />
@@ -490,7 +503,6 @@
         await apiRequest("crm.php?entity=productions", {
           method: "POST",
           body: JSON.stringify({
-            workerId: Number(formData.get("workerId") || 0),
             productName: String(formData.get("productName") || "").trim(),
             quantity: Number(formData.get("quantity") || 0),
             producedDate,
@@ -521,6 +533,38 @@
       try {
         await refreshAndRender();
         setMessage(`Табель на ${formatDate(picked)} загружен.`);
+      } catch (error) {
+        setMessage(error.message, "is-error");
+      }
+    });
+  }
+
+  if (attendanceReportForm) {
+    attendanceReportForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(attendanceReportForm);
+      const month = normalizeReportMonth(formData.get("attendanceMonth"));
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        setMessage("Укажите месяц отчета в формате ГГГГ-ММ.", "is-error");
+        return;
+      }
+
+      const url = `${API_BASE}/crm.php?entity=attendance_report&month=${encodeURIComponent(month)}`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Не удалось сформировать отчет (HTTP ${response.status}).`);
+        }
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = `attendance_report_${month}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+        setMessage(`Отчет за ${month} скачан.`, "is-success");
       } catch (error) {
         setMessage(error.message, "is-error");
       }
@@ -751,18 +795,16 @@
     if (!state.productions.length) {
       productionsBody.innerHTML = `
         <tr>
-          <td colspan="5" class="table-empty">За выбранную дату выпусков нет.</td>
+          <td colspan="4" class="table-empty">За выбранную дату выпусков нет.</td>
         </tr>`;
       return;
     }
 
     productionsBody.innerHTML = state.productions
       .map((row) => {
-        const worker = workerById(row.worker_id);
         return `
           <tr>
             <td>${formatDate(row.produced_date)}</td>
-            <td>${escapeHtml(worker?.name || "Удаленный сотрудник")}</td>
             <td>${escapeHtml(row.product_name || "-")}</td>
             <td>${Number(row.quantity || 0)}</td>
             <td class="actions-cell">
