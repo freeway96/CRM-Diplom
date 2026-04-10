@@ -109,10 +109,26 @@ function ensure_schema(PDO $pdo): void
             details TEXT NULL,
             amount DECIMAL(12,2) NOT NULL DEFAULT 0,
             status ENUM('new', 'in_progress', 'won', 'lost') NOT NULL DEFAULT 'new',
+            priority ENUM('low', 'medium', 'high', 'critical') NOT NULL DEFAULT 'medium',
+            next_action_text VARCHAR(180) NULL,
+            next_action_date DATE NULL,
+            pipeline_stage ENUM(
+                'order_received',
+                'contract_preparation',
+                'prepayment_received',
+                'production_ready',
+                'transport_ready_notice',
+                'contract_closed'
+            ) NOT NULL DEFAULT 'order_received',
+            stage_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expected_date DATE NULL,
+            is_archived TINYINT(1) NOT NULL DEFAULT 0,
+            archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_deals_client (client_id),
             KEY idx_deals_worker (worker_id),
+            KEY idx_deals_stage (pipeline_stage),
             CONSTRAINT fk_deals_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
             CONSTRAINT fk_deals_worker FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
@@ -134,6 +150,88 @@ function ensure_schema(PDO $pdo): void
     ")->fetch()["cnt"] ?? 0);
     if ($columnDetails === 0) {
         $pdo->exec("ALTER TABLE deals ADD COLUMN details TEXT NULL AFTER order_name");
+    }
+
+    $columnPipelineStage = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'pipeline_stage'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnPipelineStage === 0) {
+        $pdo->exec("
+            ALTER TABLE deals
+            ADD COLUMN pipeline_stage ENUM(
+                'order_received',
+                'contract_preparation',
+                'prepayment_received',
+                'production_ready',
+                'transport_ready_notice',
+                'contract_closed'
+            ) NOT NULL DEFAULT 'order_received' AFTER status
+        ");
+    }
+
+    $columnExpectedDate = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'expected_date'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnExpectedDate === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN expected_date DATE NULL AFTER pipeline_stage");
+    }
+
+    $columnPriority = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'priority'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnPriority === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN priority ENUM('low', 'medium', 'high', 'critical') NOT NULL DEFAULT 'medium' AFTER status");
+    }
+
+    $columnNextActionText = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'next_action_text'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnNextActionText === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN next_action_text VARCHAR(180) NULL AFTER priority");
+    }
+
+    $columnNextActionDate = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'next_action_date'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnNextActionDate === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN next_action_date DATE NULL AFTER next_action_text");
+    }
+
+    $columnStageUpdatedAt = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'stage_updated_at'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnStageUpdatedAt === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN stage_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER pipeline_stage");
+    }
+
+    $columnIsArchived = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'is_archived'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnIsArchived === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0 AFTER expected_date");
+    }
+
+    $columnArchivedAt = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deals' AND COLUMN_NAME = 'archived_at'
+    ")->fetch()["cnt"] ?? 0);
+    if ($columnArchivedAt === 0) {
+        $pdo->exec("ALTER TABLE deals ADD COLUMN archived_at TIMESTAMP NULL DEFAULT NULL AFTER is_archived");
     }
 
     $columnWorkerNullable = (int) ($pdo->query("
@@ -206,4 +304,59 @@ function ensure_schema(PDO $pdo): void
 
         $pdo->exec("ALTER TABLE productions DROP COLUMN worker_id");
     }
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            user_id INT NOT NULL,
+            avatar_file VARCHAR(255) NULL,
+            phone VARCHAR(40) NULL,
+            email VARCHAR(160) NULL,
+            department VARCHAR(120) NULL,
+            position_title VARCHAR(120) NULL,
+            bio TEXT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id),
+            CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES login(ID) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    ");
+
+    $profileAvatarColumn = (int) ($pdo->query("
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_profiles' AND COLUMN_NAME = 'avatar_file'
+    ")->fetch()["cnt"] ?? 0);
+    if ($profileAvatarColumn === 0) {
+        $pdo->exec("ALTER TABLE user_profiles ADD COLUMN avatar_file VARCHAR(255) NULL AFTER user_id");
+    }
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS calendar_notes (
+            id INT NOT NULL AUTO_INCREMENT,
+            user_id INT NOT NULL,
+            note_date DATE NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            description TEXT NULL,
+            is_done TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_calendar_user_date (user_id, note_date),
+            CONSTRAINT fk_calendar_user FOREIGN KEY (user_id) REFERENCES login(ID) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS company_files (
+            id INT NOT NULL AUTO_INCREMENT,
+            uploaded_by INT NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            stored_name VARCHAR(255) NOT NULL,
+            mime_type VARCHAR(180) NULL,
+            file_size BIGINT NOT NULL DEFAULT 0,
+            category VARCHAR(120) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_company_files_created (created_at),
+            CONSTRAINT fk_company_files_user FOREIGN KEY (uploaded_by) REFERENCES login(ID) ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+    ");
 }

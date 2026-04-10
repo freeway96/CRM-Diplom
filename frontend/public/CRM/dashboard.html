@@ -8,7 +8,7 @@
   <link rel="icon" href="/favicon.ico" />
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="login.css" />
-  <link rel="stylesheet" href="dashboard.css?v=20260216-layout2" />
+  <link rel="stylesheet" href="dashboard.css?v=20260410-overview2" />
 </head>
 <body class="dashboard-page">
   <header class="header login-header">
@@ -17,7 +17,15 @@
         <span class="brand-mark">ХПК</span>
         <span class="brand-text">CRM-система предприятия</span>
       </a>
-      <button class="btn btn-line" type="button" data-logout-btn>Выйти</button>
+      <div class="header-actions">
+        <button class="btn btn-line icon-only-btn" type="button" data-logout-btn aria-label="Выйти" title="Выйти">
+          <svg class="icon-action" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 7L19 12L14 17" />
+            <path d="M19 12H9" />
+            <path d="M10 4H7C5.89543 4 5 4.89543 5 6V18C5 19.1046 5.89543 20 7 20H10" />
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -26,19 +34,165 @@
       <aside class="dashboard-sidebar">
         <p class="kicker">Разделы CRM</p>
         <button class="tab-btn is-active" type="button" data-tab-btn data-tab-target="overview">Дашборд</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">CRM-воронка</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="calendar">Календарь</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="disk">Диск компании</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="clients">Клиенты</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">Сделки</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Сотрудники</button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
         <button class="tab-btn" type="button" data-tab-btn data-tab-target="attendance">Табель</button>
       </aside>
 
       <div class="dashboard-content">
         <section class="dashboard-panel is-active" data-tab-panel="overview">
-          <h1>Дашборд</h1>
-          <p class="login-text" data-user-info></p>
-          <p class="login-message" data-dashboard-message aria-live="polite"></p>
-          <div class="stats-grid dashboard-stats" data-overview-cards></div>
+          <div class="overview-hero">
+            <div class="overview-hero-copy">
+              <h1>Дашборд предприятия</h1>
+              <p class="overview-lead" data-overview-lead>Загружаем сводку по сделкам, срокам и активности.</p>
+              <p class="login-text" data-user-info></p>
+              <p class="login-message" data-dashboard-message aria-live="polite"></p>
+            </div>
+            <div class="overview-hero-actions">
+              <button class="btn btn-fill" type="button" data-overview-create-deal>Новая сделка</button>
+              <button class="btn btn-line" type="button" data-overview-open-calendar>Открыть календарь</button>
+              <button class="btn btn-line" type="button" data-overview-open-disk>Открыть диск</button>
+            </div>
+          </div>
+
+          <div class="stats-grid dashboard-stats overview-kpis" data-overview-cards></div>
+
+          <div class="overview-layout">
+            <section class="overview-main-stack">
+              <article class="overview-focus-card" data-overview-focus></article>
+              <div class="charts-grid overview-charts">
+                <article class="chart-card chart-card-stage">
+                  <div class="chart-head">
+                    <h3>Количество сделок по этапам</h3>
+                  </div>
+                  <canvas width="680" height="260" data-stage-chart></canvas>
+                </article>
+                <article class="chart-card chart-card-activity">
+                  <div class="chart-head">
+                    <h3>Статусы сделок</h3>
+                  </div>
+                  <canvas width="680" height="260" data-activity-chart></canvas>
+                </article>
+              </div>
+            </section>
+
+            <aside class="overview-side-stack">
+              <article class="overview-list-card">
+                <div class="overview-list-head">
+                  <h3>Ближайшие сроки</h3>
+                  <span>Договоры</span>
+                </div>
+                <div class="overview-list-body" data-overview-deadlines></div>
+              </article>
+
+              <article class="overview-list-card">
+                <div class="overview-list-head">
+                  <h3>Ключевые клиенты</h3>
+                  <span>По сумме</span>
+                </div>
+                <div class="overview-list-body" data-overview-clients></div>
+              </article>
+
+              <article class="overview-list-card">
+                <div class="overview-list-head">
+                  <h3>Рабочий фокус</h3>
+                  <span>Сегодня</span>
+                </div>
+                <div class="overview-list-body" data-overview-todo></div>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="deals">
+          <h2>CRM-воронка по договору</h2>
+          <div class="section-actions">
+            <button class="btn btn-fill" type="button" data-create-deal>Создать сделку</button>
+          </div>
+          <div class="stats-grid dashboard-stats funnel-stats" data-funnel-cards></div>
+          <form class="entity-form deal-filter-form" data-deal-filter-form>
+            <input type="search" name="dealSearch" placeholder="Поиск по сделке или клиенту" data-deal-search />
+            <select name="dealStatus" data-deal-status-filter>
+              <option value="all">Все статусы</option>
+              <option value="new">Новая</option>
+              <option value="in_progress">В работе</option>
+              <option value="won">Завершена</option>
+            </select>
+            <select name="dealRisk" data-deal-risk-filter>
+              <option value="all">Все сделки</option>
+              <option value="unassigned">Без ответственного</option>
+              <option value="high_priority">Высокий приоритет</option>
+            </select>
+          </form>
+          <div class="kanban-board" data-kanban-board></div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="calendar">
+          <h2>Календарь памяток</h2>
+          <div class="section-actions">
+            <form class="entity-form compact-form calendar-month-form" data-calendar-month-form>
+              <input type="month" name="calendarMonth" data-calendar-month required />
+              <button class="btn btn-line calendar-cta-btn" type="submit">Показать месяц</button>
+            </form>
+            <button class="btn btn-fill calendar-cta-btn" type="button" data-create-calendar-note>Добавить памятку</button>
+          </div>
+          <div class="calendar-layout">
+            <div class="calendar-main-wrap">
+              <button class="btn btn-line calendar-side-arrow" type="button" data-calendar-prev aria-label="Предыдущий месяц">←</button>
+              <article class="calendar-card">
+                <div class="calendar-card-head">
+                  <div class="calendar-legend">
+                    <span class="calendar-legend-item"><i class="calendar-legend-dot is-note"></i> Памятки</span>
+                    <span class="calendar-legend-item"><i class="calendar-legend-dot is-deal"></i> Сроки договоров</span>
+                    <span class="calendar-legend-item"><i class="calendar-legend-dot is-done"></i> Выполнено</span>
+                  </div>
+                </div>
+                <div class="calendar-weekdays">
+                  <span>Пн</span>
+                  <span>Вт</span>
+                  <span>Ср</span>
+                  <span>Чт</span>
+                  <span>Пт</span>
+                  <span>Сб</span>
+                  <span>Вс</span>
+                </div>
+                <div class="calendar-grid" data-calendar-grid></div>
+              </article>
+              <button class="btn btn-line calendar-side-arrow" type="button" data-calendar-next aria-label="Следующий месяц">→</button>
+            </div>
+            <article class="calendar-day-panel">
+              <h3 data-calendar-day-title>Памятки</h3>
+              <div class="calendar-day-list" data-calendar-day-list></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="dashboard-panel" data-tab-panel="disk">
+          <h2>Диск компании</h2>
+          <div class="section-actions disk-actions">
+            <button class="btn btn-fill" type="button" data-create-company-file>Загрузить файл</button>
+            <form class="entity-form compact-form disk-filter-form" data-disk-filter-form>
+              <input type="search" name="diskSearch" placeholder="Поиск по названию, категории, формату" data-disk-search />
+            </form>
+          </div>
+          <div class="table-wrap">
+            <table class="entity-table">
+              <thead>
+                <tr>
+                  <th>Файл</th>
+                  <th>Категория</th>
+                  <th>Размер</th>
+                  <th>Дата</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-company-files-body></tbody>
+            </table>
+          </div>
         </section>
 
         <section class="dashboard-panel" data-tab-panel="clients">
@@ -58,28 +212,6 @@
                 </tr>
               </thead>
               <tbody data-clients-body></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="dashboard-panel" data-tab-panel="deals">
-          <h2>Сделки</h2>
-          <div class="section-actions">
-            <button class="btn btn-fill" type="button" data-create-deal>Создать сделку</button>
-          </div>
-          <div class="table-wrap">
-            <table class="entity-table">
-              <thead>
-                <tr>
-                  <th>Заказ</th>
-                  <th>Клиент</th>
-                  <th>Сумма</th>
-                  <th>Статус</th>
-                  <th>Дата</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody data-deals-body></tbody>
             </table>
           </div>
         </section>
@@ -200,6 +332,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=20260302-ui4" defer></script>
+  <script src="dashboard.js?v=20260410-overview2" defer></script>
 </body>
 </html>

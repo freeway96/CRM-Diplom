@@ -13,6 +13,75 @@ $id = isset($_GET["id"]) ? (int) $_GET["id"] : 0;
 $attendanceDate = trim((string) ($_GET["attendance_date"] ?? ""));
 $productionDate = trim((string) ($_GET["production_date"] ?? ""));
 $reportMonth = trim((string) ($_GET["month"] ?? ""));
+$calendarMonth = trim((string) ($_GET["calendar_month"] ?? ""));
+$userId = isset($_GET["user_id"]) ? (int) $_GET["user_id"] : 0;
+
+const UPLOAD_ROOT_PRIMARY = __DIR__ . "/uploads";
+const UPLOAD_ROOT_FALLBACK = "/tmp/crm_uploads";
+
+function get_upload_dir(string $subDir): string
+{
+    $safeSubDir = trim($subDir, "/");
+    if ($safeSubDir === "") {
+        json_response(["ok" => false, "message" => "Некорректный каталог загрузки."], 500);
+    }
+
+    $roots = [UPLOAD_ROOT_PRIMARY, UPLOAD_ROOT_FALLBACK];
+    foreach ($roots as $root) {
+        $dir = $root . "/" . $safeSubDir;
+        if (is_dir($dir)) {
+            return $dir;
+        }
+        if (@mkdir($dir, 0775, true)) {
+            return $dir;
+        }
+    }
+    json_response(["ok" => false, "message" => "Сервер не может создать каталог для хранения файлов."], 500);
+}
+
+function resolve_uploaded_file_path(string $storedName, string $subDir): string
+{
+    $safeName = basename($storedName);
+    if ($safeName === "") return "";
+
+    $safeSubDir = trim($subDir, "/");
+    if ($safeSubDir === "") return "";
+
+    $roots = [UPLOAD_ROOT_PRIMARY, UPLOAD_ROOT_FALLBACK];
+    foreach ($roots as $root) {
+        $dir = $root . "/" . $safeSubDir;
+        $path = $dir . "/" . $safeName;
+        if (is_file($path)) {
+            return $path;
+        }
+    }
+    return "";
+}
+
+function normalize_display_file_name(string $name): string
+{
+    $clean = trim($name);
+    $clean = str_replace(["\\", "/"], "_", $clean);
+    $clean = preg_replace('/[\x00-\x1F\x7F]+/u', '', $clean);
+    return $clean !== "" ? $clean : "document";
+}
+
+function sanitize_file_name(string $name): string
+{
+    $clean = preg_replace('/[^\p{L}\p{N}._-]+/u', '_', $name);
+    $clean = trim((string) $clean, "._-");
+    return $clean !== "" ? $clean : "file";
+}
+
+function normalize_month_range(string $month): array
+{
+    if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+        return ["", ""];
+    }
+    $startDate = $month . "-01";
+    $endDate = date("Y-m-t", strtotime($startDate));
+    return [$startDate, $endDate];
+}
 
 if ($method === "GET") {
     if ($entity === "attendance_report") {
@@ -81,10 +150,42 @@ if ($method === "GET") {
         exit;
     }
 
+    if ($entity === "company_file_download") {
+        if ($id <= 0) {
+            json_response(["ok" => false, "message" => "Некорректный id файла."], 400);
+        }
+
+        $stmt = $pdo->prepare("SELECT id, file_name, stored_name, mime_type FROM company_files WHERE id = :id LIMIT 1");
+        $stmt->execute([":id" => $id]);
+        $file = $stmt->fetch();
+        if (!$file) {
+            json_response(["ok" => false, "message" => "Файл не найден."], 404);
+        }
+
+        $storedName = (string) ($file["stored_name"] ?? "");
+        if ($storedName === "") {
+            json_response(["ok" => false, "message" => "Файл поврежден."], 500);
+        }
+
+        $path = resolve_uploaded_file_path($storedName, "company_disk");
+        if ($path === "") {
+            json_response(["ok" => false, "message" => "Файл отсутствует на сервере."], 404);
+        }
+
+        $downloadName = (string) ($file["file_name"] ?? "document");
+        $mime = (string) ($file["mime_type"] ?? "application/octet-stream");
+
+        header("Content-Type: " . $mime);
+        header("Content-Disposition: attachment; filename*=UTF-8''" . rawurlencode($downloadName));
+        header("Content-Length: " . (string) filesize($path));
+        readfile($path);
+        exit;
+    }
+
     $clients = $pdo->query("SELECT id, name, contact, phone, created_at FROM clients ORDER BY id DESC")->fetchAll();
     $workers = $pdo->query("SELECT id, name, role, created_at FROM workers ORDER BY id DESC")->fetchAll();
     $deals = $pdo->query("
-        SELECT id, client_id, worker_id, order_name, details, amount, status, created_at
+        SELECT id, client_id, worker_id, order_name, details, amount, status, priority, next_action_text, next_action_date, pipeline_stage, stage_updated_at, expected_date, is_archived, archived_at, created_at
         FROM deals
         ORDER BY id DESC
     ")->fetchAll();
@@ -123,6 +224,44 @@ if ($method === "GET") {
         ")->fetchAll();
     }
 
+    $calendarSql = "
+        SELECT id, user_id, note_date, title, description, is_done, created_at
+        FROM calendar_notes
+    ";
+    $calendarParams = [];
+    $calendarWhere = [];
+
+    if ($userId > 0) {
+        $calendarWhere[] = "user_id = :calendar_user_id";
+        $calendarParams[":calendar_user_id"] = $userId;
+    }
+
+    if ($calendarMonth !== "") {
+        [$calendarStart, $calendarEnd] = normalize_month_range($calendarMonth);
+        if ($calendarStart === "" || $calendarEnd === "") {
+            json_response(["ok" => false, "message" => "Некорректный месяц календаря."], 400);
+        }
+        $calendarWhere[] = "note_date BETWEEN :calendar_start AND :calendar_end";
+        $calendarParams[":calendar_start"] = $calendarStart;
+        $calendarParams[":calendar_end"] = $calendarEnd;
+    }
+
+    if (!empty($calendarWhere)) {
+        $calendarSql .= " WHERE " . implode(" AND ", $calendarWhere);
+    }
+    $calendarSql .= " ORDER BY note_date ASC, id DESC";
+
+    $calendarStmt = $pdo->prepare($calendarSql);
+    $calendarStmt->execute($calendarParams);
+    $calendarNotes = $calendarStmt->fetchAll();
+
+    $companyFiles = $pdo->query("
+        SELECT f.id, f.uploaded_by, l.User AS uploaded_by_name, f.file_name, f.stored_name, f.mime_type, f.file_size, f.category, f.created_at
+        FROM company_files f
+        JOIN login l ON l.ID = f.uploaded_by
+        ORDER BY f.id DESC
+    ")->fetchAll();
+
     json_response([
         "ok" => true,
         "data" => [
@@ -131,11 +270,69 @@ if ($method === "GET") {
             "deals" => $deals,
             "attendance" => $attendance,
             "productions" => $productions,
+            "calendar_notes" => $calendarNotes,
+            "company_files" => $companyFiles,
         ],
     ]);
 }
 
 if ($method === "POST") {
+
+    if ($entity === "company_files") {
+        $uploadedBy = isset($_POST["uploadedBy"]) ? (int) $_POST["uploadedBy"] : 0;
+        $category = trim((string) ($_POST["category"] ?? ""));
+
+        if ($uploadedBy <= 0) {
+            json_response(["ok" => false, "message" => "Не указан пользователь загрузки."], 400);
+        }
+
+        if (!isset($_FILES["file"]) || !is_array($_FILES["file"])) {
+            json_response(["ok" => false, "message" => "Файл не загружен."], 400);
+        }
+
+        $file = $_FILES["file"];
+        if ((int) ($file["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            json_response(["ok" => false, "message" => "Ошибка загрузки файла."], 400);
+        }
+
+        $tmpName = (string) ($file["tmp_name"] ?? "");
+        if ($tmpName === "" || !is_uploaded_file($tmpName)) {
+            json_response(["ok" => false, "message" => "Некорректный файл загрузки."], 400);
+        }
+
+        $displayName = normalize_display_file_name((string) ($file["name"] ?? "document"));
+        $safeFileName = sanitize_file_name($displayName);
+        $mimeType = trim((string) ($file["type"] ?? "application/octet-stream"));
+        $fileSize = (int) ($file["size"] ?? 0);
+
+        if ($fileSize <= 0 || $fileSize > 25 * 1024 * 1024) {
+            json_response(["ok" => false, "message" => "Допустимый размер файла: от 1 байта до 25 МБ."], 400);
+        }
+
+        $uploadDir = get_upload_dir("company_disk");
+        $storedName = date("Ymd_His") . "_" . bin2hex(random_bytes(6)) . "_" . $safeFileName;
+        $destination = $uploadDir . "/" . $storedName;
+
+        if (!move_uploaded_file($tmpName, $destination)) {
+            json_response(["ok" => false, "message" => "Не удалось сохранить файл на сервере."], 500);
+        }
+
+        $stmt = $pdo->prepare("
+            INSERT INTO company_files (uploaded_by, file_name, stored_name, mime_type, file_size, category)
+            VALUES (:uploaded_by, :file_name, :stored_name, :mime_type, :file_size, :category)
+        ");
+        $stmt->execute([
+            ":uploaded_by" => $uploadedBy,
+            ":file_name" => $displayName,
+            ":stored_name" => $storedName,
+            ":mime_type" => ($mimeType !== "" ? $mimeType : "application/octet-stream"),
+            ":file_size" => $fileSize,
+            ":category" => ($category !== "" ? $category : null),
+        ]);
+
+        json_response(["ok" => true], 201);
+    }
+
     $input = read_json_body();
 
     if ($entity === "clients") {
@@ -202,41 +399,111 @@ if ($method === "POST") {
     if ($entity === "deals") {
         $dealId = (int) ($input["dealId"] ?? 0);
         $clientId = (int) ($input["clientId"] ?? 0);
+        $workerId = (int) ($input["workerId"] ?? 0);
         $orderName = trim((string) ($input["orderName"] ?? ""));
         $details = trim((string) ($input["details"] ?? ""));
         $amount = (float) ($input["amount"] ?? 0);
         $status = (string) ($input["status"] ?? "new");
+        $priority = (string) ($input["priority"] ?? "medium");
+        $pipelineStage = (string) ($input["pipelineStage"] ?? "order_received");
+        $expectedDateRaw = trim((string) ($input["expectedDate"] ?? ""));
+        $isArchived = (int) ($input["isArchived"] ?? 0) === 1 ? 1 : 0;
         $allowedStatus = ["new", "in_progress", "won", "lost"];
+        $allowedPriority = ["low", "medium", "high", "critical"];
+        $allowedStage = [
+            "order_received",
+            "contract_preparation",
+            "prepayment_received",
+            "production_ready",
+            "transport_ready_notice",
+            "contract_closed",
+        ];
 
         if ($clientId <= 0 || $orderName === "" || $amount < 0 || !in_array($status, $allowedStatus, true)) {
             json_response(["ok" => false, "message" => "Некорректные данные сделки."], 400);
         }
 
+        if (!in_array($pipelineStage, $allowedStage, true)) {
+            json_response(["ok" => false, "message" => "Некорректный этап сделки."], 400);
+        }
+
+        if (!in_array($priority, $allowedPriority, true)) {
+            json_response(["ok" => false, "message" => "Некорректный приоритет сделки."], 400);
+        }
+
+        $expectedDate = null;
+        if ($expectedDateRaw !== "") {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expectedDateRaw)) {
+                json_response(["ok" => false, "message" => "Некорректная дата сделки."], 400);
+            }
+            $expectedDate = $expectedDateRaw;
+        }
+
         if ($dealId > 0) {
+            $currentStageStmt = $pdo->prepare("SELECT pipeline_stage, stage_updated_at, is_archived, archived_at FROM deals WHERE id = :id LIMIT 1");
+            $currentStageStmt->execute([":id" => $dealId]);
+            $currentDeal = $currentStageStmt->fetch();
+            if (!$currentDeal) {
+                json_response(["ok" => false, "message" => "Сделка не найдена."], 404);
+            }
+            $stageUpdatedAt = (string) ($currentDeal["pipeline_stage"] ?? "") !== $pipelineStage
+                ? date("Y-m-d H:i:s")
+                : (string) ($currentDeal["stage_updated_at"] ?? date("Y-m-d H:i:s"));
+            $archivedAt = $isArchived === 1
+                ? ((int) ($currentDeal["is_archived"] ?? 0) === 1
+                    ? ((string) ($currentDeal["archived_at"] ?? "") !== "" ? (string) $currentDeal["archived_at"] : date("Y-m-d H:i:s"))
+                    : date("Y-m-d H:i:s"))
+                : null;
+
             $stmt = $pdo->prepare("
                 UPDATE deals
-                SET client_id = :client_id, order_name = :order_name, details = :details, amount = :amount, status = :status
+                SET
+                    client_id = :client_id,
+                    worker_id = :worker_id,
+                    order_name = :order_name,
+                    details = :details,
+                    amount = :amount,
+                    status = :status,
+                    priority = :priority,
+                    pipeline_stage = :pipeline_stage,
+                    stage_updated_at = :stage_updated_at,
+                    expected_date = :expected_date,
+                    is_archived = :is_archived,
+                    archived_at = :archived_at
                 WHERE id = :id
             ");
             $stmt->execute([
                 ":id" => $dealId,
                 ":client_id" => $clientId,
+                ":worker_id" => ($workerId > 0 ? $workerId : null),
                 ":order_name" => $orderName,
                 ":details" => ($details === "" ? null : $details),
                 ":amount" => $amount,
                 ":status" => $status,
+                ":priority" => $priority,
+                ":pipeline_stage" => $pipelineStage,
+                ":stage_updated_at" => $stageUpdatedAt,
+                ":expected_date" => $expectedDate,
+                ":is_archived" => $isArchived,
+                ":archived_at" => $archivedAt,
             ]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO deals (client_id, worker_id, order_name, details, amount, status)
-                VALUES (:client_id, NULL, :order_name, :details, :amount, :status)
+                INSERT INTO deals (client_id, worker_id, order_name, details, amount, status, priority, pipeline_stage, stage_updated_at, expected_date, is_archived, archived_at)
+                VALUES (:client_id, :worker_id, :order_name, :details, :amount, :status, :priority, :pipeline_stage, NOW(), :expected_date, :is_archived, :archived_at)
             ");
             $stmt->execute([
                 ":client_id" => $clientId,
+                ":worker_id" => ($workerId > 0 ? $workerId : null),
                 ":order_name" => $orderName,
                 ":details" => ($details === "" ? null : $details),
                 ":amount" => $amount,
                 ":status" => $status,
+                ":priority" => $priority,
+                ":pipeline_stage" => $pipelineStage,
+                ":expected_date" => $expectedDate,
+                ":is_archived" => $isArchived,
+                ":archived_at" => ($isArchived === 1 ? date("Y-m-d H:i:s") : null),
             ]);
         }
         json_response(["ok" => true], 201);
@@ -290,6 +557,49 @@ if ($method === "POST") {
         json_response(["ok" => true], 201);
     }
 
+    if ($entity === "calendar_notes") {
+        $noteId = (int) ($input["noteId"] ?? 0);
+        $noteUserId = (int) ($input["userId"] ?? 0);
+        $noteDate = trim((string) ($input["noteDate"] ?? ""));
+        $title = trim((string) ($input["title"] ?? ""));
+        $description = trim((string) ($input["description"] ?? ""));
+        $isDone = (int) ($input["isDone"] ?? 0) === 1 ? 1 : 0;
+
+        if ($noteUserId <= 0 || $noteDate === "" || $title === "") {
+            json_response(["ok" => false, "message" => "Заполните обязательные поля памятки."], 400);
+        }
+
+        if ($noteId > 0) {
+            $stmt = $pdo->prepare("
+                UPDATE calendar_notes
+                SET note_date = :note_date, title = :title, description = :description, is_done = :is_done
+                WHERE id = :id AND user_id = :user_id
+            ");
+            $stmt->execute([
+                ":id" => $noteId,
+                ":user_id" => $noteUserId,
+                ":note_date" => $noteDate,
+                ":title" => $title,
+                ":description" => ($description !== "" ? $description : null),
+                ":is_done" => $isDone,
+            ]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO calendar_notes (user_id, note_date, title, description, is_done)
+                VALUES (:user_id, :note_date, :title, :description, :is_done)
+            ");
+            $stmt->execute([
+                ":user_id" => $noteUserId,
+                ":note_date" => $noteDate,
+                ":title" => $title,
+                ":description" => ($description !== "" ? $description : null),
+                ":is_done" => $isDone,
+            ]);
+        }
+
+        json_response(["ok" => true], 201);
+    }
+
     json_response(["ok" => false, "message" => "Неизвестная сущность."], 400);
 }
 
@@ -325,6 +635,40 @@ if ($method === "DELETE") {
     if ($entity === "productions") {
         $stmt = $pdo->prepare("DELETE FROM productions WHERE id = :id");
         $stmt->execute([":id" => $id]);
+        json_response(["ok" => true]);
+    }
+
+    if ($entity === "calendar_notes") {
+        $noteUserId = isset($_GET["user_id"]) ? (int) $_GET["user_id"] : 0;
+        if ($noteUserId <= 0) {
+            json_response(["ok" => false, "message" => "Не указан пользователь."], 400);
+        }
+        $stmt = $pdo->prepare("DELETE FROM calendar_notes WHERE id = :id AND user_id = :user_id");
+        $stmt->execute([
+            ":id" => $id,
+            ":user_id" => $noteUserId,
+        ]);
+        json_response(["ok" => true]);
+    }
+
+    if ($entity === "company_files") {
+        $stmt = $pdo->prepare("SELECT stored_name FROM company_files WHERE id = :id LIMIT 1");
+        $stmt->execute([":id" => $id]);
+        $file = $stmt->fetch();
+        if (!$file) {
+            json_response(["ok" => false, "message" => "Файл не найден."], 404);
+        }
+
+        $pdo->prepare("DELETE FROM company_files WHERE id = :id")->execute([":id" => $id]);
+
+        $storedName = basename((string) ($file["stored_name"] ?? ""));
+        if ($storedName !== "") {
+            $path = resolve_uploaded_file_path($storedName, "company_disk");
+            if ($path !== "") {
+                @unlink($path);
+            }
+        }
+
         json_response(["ok" => true]);
     }
 
