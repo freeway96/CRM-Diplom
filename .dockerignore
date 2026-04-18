@@ -1,5 +1,28 @@
 .git
+.github
+.env
+.env.*
+!.env.example
+
+# Frontend image only needs Dockerfile, frontend/public and frontend/nginx.
+backend
+database
+scripts
+docker-compose*.yml
 README.md
-info.txt
-.gitignore
-.dockerignore
+
+# Local/runtime noise
+node_modules
+vendor
+.cache
+dist
+build
+coverage
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+.DS_Store
+Thumbs.db

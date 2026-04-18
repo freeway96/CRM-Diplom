@@ -1,0 +1,23 @@
+{
+  "name": "CRM-система предприятия ХПК",
+  "short_name": "ХПК CRM",
+  "description": "Рабочий кабинет CRM ООО ХПК для учета клиентов, сделок, сроков и файлов.",
+  "start_url": "/CRM/login.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eef4fa",
+  "theme_color": "#f0b429",
+  "icons": [
+    {
+      "src": "/assets/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon"
+    }
+  ]
+}

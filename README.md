@@ -41,6 +41,9 @@ frontend/public/              Публичные файлы сайта
 frontend/public/CRM/          Интерфейс CRM
 frontend/public/CRM/js/       Модули dashboard
 frontend/public/assets/       Локальные шрифты, изображения и иконки
+frontend/public/manifest.webmanifest
+                              Системное описание приложения для браузера
+frontend/public/robots.txt    Ограничение индексации служебных разделов
 frontend/nginx/default.conf   Nginx-конфигурация frontend и proxy /api
 database/sql/                 SQL-скрипты базы
 scripts/build-assets.sh       Сборка минифицированных CSS/JS

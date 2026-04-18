@@ -1,0 +1,37 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Runtime uploads and generated user files
+backend/api/uploads/
+frontend/public/uploads/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+.DS_Store
+Thumbs.db
+
+# Editor and OS metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependency/cache folders if tools are installed locally
+node_modules/
+vendor/
+.cache/
+dist/
+build/
+coverage/
+
+# Database dumps and local backups
+*.sql.gz
+*.dump
+*.backup
