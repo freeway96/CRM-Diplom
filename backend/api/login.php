@@ -19,16 +19,28 @@ if ($login === "" || $password === "") {
 $pdo = get_pdo();
 ensure_schema($pdo);
 
-$stmt = $pdo->prepare("SELECT ID, User, Login FROM login WHERE Login = :login AND Password = :password LIMIT 1");
-$stmt->execute([
-    ":login" => $login,
-    ":password" => $password,
-]);
+$stmt = $pdo->prepare("SELECT ID, User, Login, Password FROM login WHERE Login = :login LIMIT 1");
+$stmt->execute([":login" => $login]);
 
 $user = $stmt->fetch();
 
-if (!$user) {
+$storedPassword = (string) ($user["Password"] ?? "");
+$isPasswordValid = $user && (
+    password_verify($password, $storedPassword) ||
+    hash_equals($storedPassword, $password)
+);
+
+if (!$isPasswordValid) {
     json_response(["ok" => false, "message" => "Неверный логин или пароль."], 401);
+}
+
+$needsPasswordRehash = !password_get_info($storedPassword)["algo"] || password_needs_rehash($storedPassword, PASSWORD_DEFAULT);
+if ($needsPasswordRehash) {
+    $hashStmt = $pdo->prepare("UPDATE login SET Password = :password_hash WHERE ID = :id");
+    $hashStmt->execute([
+        ":password_hash" => password_hash($password, PASSWORD_DEFAULT),
+        ":id" => $user["ID"],
+    ]);
 }
 
 $upd = $pdo->prepare("UPDATE login SET Last_Login = NOW() WHERE ID = :id");
@@ -42,4 +54,3 @@ json_response([
         "login" => $user["Login"],
     ],
 ]);
-

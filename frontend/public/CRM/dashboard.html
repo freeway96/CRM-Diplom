@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Кабинет | ООО «ХПК»</title>
   <meta name="description" content="Рабочий кабинет CRM ООО «ХПК»." />
-  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" href="../assets/icons/favicon.ico" />
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="login.css" />
-  <link rel="stylesheet" href="dashboard.css?v=20260410-overview2" />
+  <link rel="stylesheet" href="dashboard.min.css?v=20260418-prod1" />
 </head>
 <body class="dashboard-page">
   <header class="header login-header">
@@ -19,11 +19,7 @@
       </a>
       <div class="header-actions">
         <button class="btn btn-line icon-only-btn" type="button" data-logout-btn aria-label="Выйти" title="Выйти">
-          <svg class="icon-action" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M14 7L19 12L14 17" />
-            <path d="M19 12H9" />
-            <path d="M10 4H7C5.89543 4 5 4.89543 5 6V18C5 19.1046 5.89543 20 7 20H10" />
-          </svg>
+          <svg class="icon-action" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#logout"></use></svg>
         </button>
       </div>
     </div>
@@ -33,54 +29,84 @@
     <section class="container dashboard-shell">
       <aside class="dashboard-sidebar">
         <p class="kicker">Разделы CRM</p>
-        <button class="tab-btn is-active" type="button" data-tab-btn data-tab-target="overview">Дашборд</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">CRM-воронка</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="calendar">Календарь</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="disk">Диск компании</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="clients">Клиенты</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">Сотрудники</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">Учет выполненного</button>
-        <button class="tab-btn" type="button" data-tab-btn data-tab-target="attendance">Табель</button>
+        <button class="tab-btn is-active" type="button" data-tab-btn data-tab-target="overview">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#overview"></use></svg>
+          <span>Обзор</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="deals">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#funnel"></use></svg>
+          <span>CRM-воронка</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="calendar">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#calendar"></use></svg>
+          <span>Календарь</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="disk">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#disk"></use></svg>
+          <span>Файлы</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="clients">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#clients"></use></svg>
+          <span>Клиенты</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="workers">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#workers"></use></svg>
+          <span>Сотрудники</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="progress">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#progress"></use></svg>
+          <span>Учет выполненного</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab-btn data-tab-target="attendance">
+          <svg class="nav-icon" aria-hidden="true"><use href="../assets/icons/crm-icons.svg#attendance"></use></svg>
+          <span>Табель</span>
+        </button>
       </aside>
 
       <div class="dashboard-content">
         <section class="dashboard-panel is-active" data-tab-panel="overview">
           <div class="overview-hero">
             <div class="overview-hero-copy">
-              <h1>Дашборд предприятия</h1>
+              <h1>Обзор предприятия</h1>
               <p class="overview-lead" data-overview-lead>Загружаем сводку по сделкам, срокам и активности.</p>
               <p class="login-text" data-user-info></p>
-              <p class="login-message" data-dashboard-message aria-live="polite"></p>
             </div>
             <div class="overview-hero-actions">
               <button class="btn btn-fill" type="button" data-overview-create-deal>Новая сделка</button>
               <button class="btn btn-line" type="button" data-overview-open-calendar>Открыть календарь</button>
-              <button class="btn btn-line" type="button" data-overview-open-disk>Открыть диск</button>
+              <button class="btn btn-line" type="button" data-overview-open-disk>Открыть файлы</button>
             </div>
           </div>
 
           <div class="stats-grid dashboard-stats overview-kpis" data-overview-cards></div>
 
-          <div class="overview-layout">
-            <section class="overview-main-stack">
+          <div class="overview-workspace">
+            <section class="overview-command-column">
               <article class="overview-focus-card" data-overview-focus></article>
-              <div class="charts-grid overview-charts">
-                <article class="chart-card chart-card-stage">
-                  <div class="chart-head">
-                    <h3>Количество сделок по этапам</h3>
+
+              <article class="overview-board-card">
+                <div class="overview-board-head">
+                  <div>
+                    <h3>Движение сделок</h3>
+                    <p>Сколько заказов сейчас находится на каждом этапе договора.</p>
                   </div>
-                  <canvas width="680" height="260" data-stage-chart></canvas>
-                </article>
-                <article class="chart-card chart-card-activity">
-                  <div class="chart-head">
-                    <h3>Статусы сделок</h3>
-                  </div>
-                  <canvas width="680" height="260" data-activity-chart></canvas>
-                </article>
-              </div>
+                  <button class="btn btn-line btn-small" type="button" data-overview-nav="deals">Открыть воронку</button>
+                </div>
+                <div class="overview-stage-map" data-overview-stage-map></div>
+              </article>
             </section>
 
-            <aside class="overview-side-stack">
+            <aside class="overview-insight-column">
+              <article class="overview-status-card">
+                <div class="overview-board-head">
+                  <div>
+                    <h3>Статусы сделок</h3>
+                    <p>Краткая картина по состоянию договоров.</p>
+                  </div>
+                </div>
+                <div class="overview-status-grid" data-overview-status-map></div>
+              </article>
+
               <article class="overview-list-card">
                 <div class="overview-list-head">
                   <h3>Ближайшие сроки</h3>
@@ -172,7 +198,7 @@
         </section>
 
         <section class="dashboard-panel" data-tab-panel="disk">
-          <h2>Диск компании</h2>
+          <h2>Файлы</h2>
           <div class="section-actions disk-actions">
             <button class="btn btn-fill" type="button" data-create-company-file>Загрузить файл</button>
             <form class="entity-form compact-form disk-filter-form" data-disk-filter-form>
@@ -199,6 +225,9 @@
           <h2>Клиенты</h2>
           <div class="section-actions">
             <button class="btn btn-fill" type="button" data-create-client>Создать клиента</button>
+            <form class="entity-form compact-form" data-client-filter-form>
+              <input type="search" name="clientSearch" placeholder="Поиск по компании, контакту, телефону" data-client-search />
+            </form>
           </div>
           <div class="table-wrap">
             <table class="entity-table">
@@ -332,6 +361,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=20260410-overview2" defer></script>
+  <script type="module" src="dashboard.min.js?v=20260418-prod1"></script>
 </body>
 </html>

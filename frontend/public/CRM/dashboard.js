@@ -1,56 +1,11 @@
-(() => {
+import { attendanceStatusMeta, pipelineStages, priorityMeta, stageMeta, statusMeta } from "./js/dashboard-data.js";
+import { debounce, formatError, q, toLocalISODate } from "./js/dashboard-utils.js";
+
+const startDashboard = () => {
   const SESSION_KEY = "crm_auth_user";
-  const API_BASE = `${window.location.protocol}//${window.location.hostname}:8084/api`;
-  const toLocalISODate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const statusMeta = {
-    new: { label: "Новая", className: "badge-new" },
-    in_progress: { label: "В работе", className: "badge-progress" },
-    won: { label: "Завершена", className: "badge-won" },
-    lost: { label: "Отменена", className: "badge-lost" },
-  };
-
-  const attendanceStatusMeta = {
-    present: { label: "На смене", className: "badge-won" },
-    absent: { label: "Отсутствовал", className: "badge-lost" },
-    sick: { label: "Больничный", className: "badge-progress" },
-    vacation: { label: "Отпуск", className: "badge-new" },
-  };
-
-  const pipelineStages = [
-    { key: "order_received", label: "Поступление заказа" },
-    { key: "contract_preparation", label: "Формировка договора" },
-    { key: "prepayment_received", label: "Получение предоплаты" },
-    { key: "production_ready", label: "Создание товара" },
-    { key: "transport_ready_notice", label: "Готовность транспортировки" },
-    { key: "contract_closed", label: "Завершение договора" },
-  ];
-
-  const stageMeta = {
-    order_received: { playbook: "Принимаем заказ, уточняем запрос клиента и фиксируем базовые условия." },
-    contract_preparation: { playbook: "Готовим договор, согласовываем условия, сроки и состав поставки." },
-    prepayment_received: { playbook: "Контролируем получение предоплаты и подтверждаем запуск работ." },
-    production_ready: { playbook: "Запускаем изготовление и отмечаем готовность товара." },
-    transport_ready_notice: { playbook: "Подтверждаем готовность к отгрузке и информируем по логистике." },
-    contract_closed: { playbook: "Закрываем договор, фиксируем исполнение и переводим материалы в архив." },
-  };
-
-  const priorityMeta = {
-    low: { label: "Низкий", className: "priority-low" },
-    medium: { label: "Средний", className: "priority-medium" },
-    high: { label: "Высокий", className: "priority-high" },
-    critical: { label: "Критичный", className: "priority-critical" },
-  };
-
-  const q = (selector) => document.querySelector(selector);
+  const API_BASE = `${window.location.origin}/api`;
 
   const userInfo = q("[data-user-info]");
-  const messageEl = q("[data-dashboard-message]");
   const logoutBtn = q("[data-logout-btn]");
 
   const tabButtons = Array.from(document.querySelectorAll("[data-tab-btn]"));
@@ -65,6 +20,7 @@
   const createCompanyFileBtn = q("[data-create-company-file]");
   const dealFilterForm = q("[data-deal-filter-form]");
   const diskFilterForm = q("[data-disk-filter-form]");
+  const clientFilterForm = q("[data-client-filter-form]");
 
   const attendanceFilterForm = q("[data-attendance-filter-form]");
   const attendanceReportForm = q("[data-attendance-report-form]");
@@ -82,6 +38,8 @@
   const overviewCards = q("[data-overview-cards]");
   const overviewLead = q("[data-overview-lead]");
   const overviewFocus = q("[data-overview-focus]");
+  const overviewStageMap = q("[data-overview-stage-map]");
+  const overviewStatusMap = q("[data-overview-status-map]");
   const overviewDeadlines = q("[data-overview-deadlines]");
   const overviewClients = q("[data-overview-clients]");
   const overviewTodo = q("[data-overview-todo]");
@@ -99,9 +57,8 @@
   const dealStatusFilter = q("[data-deal-status-filter]");
   const dealRiskFilter = q("[data-deal-risk-filter]");
   const diskSearchInput = q("[data-disk-search]");
+  const clientSearchInput = q("[data-client-search]");
 
-  const stageChartCanvas = q("[data-stage-chart]");
-  const activityChartCanvas = q("[data-activity-chart]");
   const overviewCreateDealBtn = q("[data-overview-create-deal]");
   const overviewOpenCalendarBtn = q("[data-overview-open-calendar]");
   const overviewOpenDiskBtn = q("[data-overview-open-disk]");
@@ -147,28 +104,8 @@
     });
   }
 
-  const setMessage = (text, type = "") => {
-    if (!messageEl) return;
-    messageEl.textContent = text;
-    messageEl.classList.remove("is-error", "is-success");
-    if (type) messageEl.classList.add(type);
-  };
-
-  const formatError = (error) => {
-    if (!error) return "Неизвестная ошибка";
-    if (error instanceof Error) return error.message || error.name || "Ошибка";
-    if (typeof error === "string") return error;
-    try {
-      return JSON.stringify(error);
-    } catch (_) {
-      return String(error);
-    }
-  };
-
   const reportError = (context, error) => {
-    const details = `${context}: ${formatError(error)}`;
-    setMessage(details, "is-error");
-    console.error("[CRM]", context, error);
+    console.error("[CRM]", context, formatError(error));
   };
 
   const todayISO = toLocalISODate(new Date());
@@ -182,7 +119,9 @@
     dealStatus: "all",
     dealRisk: "all",
     diskSearch: "",
+    clientSearch: "",
   };
+
   let selectedCalendarDate = todayISO;
 
   if (attendanceDateInput) attendanceDateInput.value = filters.attendanceDate;
@@ -193,6 +132,7 @@
   if (dealStatusFilter) dealStatusFilter.value = filters.dealStatus;
   if (dealRiskFilter) dealRiskFilter.value = filters.dealRisk;
   if (diskSearchInput) diskSearchInput.value = filters.diskSearch;
+  if (clientSearchInput) clientSearchInput.value = filters.clientSearch;
 
   let state = {
     clients: [],
@@ -203,6 +143,8 @@
     calendar_notes: [],
     company_files: [],
   };
+  const DEFAULT_STAGE_CARD_LIMIT = 8;
+  const stageCardLimits = Object.fromEntries(pipelineStages.map((stage) => [stage.key, DEFAULT_STAGE_CARD_LIMIT]));
 
   const apiRequest = async (path, options = {}) => {
     const requestUrl = `${API_BASE}/${path}`;
@@ -236,13 +178,37 @@
     return data;
   };
 
-  const loadData = async () => {
+  const entitiesByTab = {
+    overview: ["clients", "workers", "deals", "company_files"],
+    deals: ["clients", "workers", "deals"],
+    calendar: ["clients", "deals", "calendar_notes"],
+    disk: ["company_files"],
+    clients: ["clients", "deals"],
+    workers: ["workers"],
+    progress: ["productions"],
+    attendance: ["workers", "attendance"],
+  };
+
+  const getEntitiesForActiveTab = () => entitiesByTab[activeTabName] || [];
+
+  const loadData = async (entities = []) => {
     const params = new URLSearchParams({
       attendance_date: filters.attendanceDate,
       production_date: filters.productionDate,
       calendar_month: filters.calendarMonth,
       user_id: String(currentUser.id || 0),
     });
+    if (entities.length) {
+      params.set("entities", entities.join(","));
+    }
+    if (entities.includes("company_files") && filters.diskSearch) {
+      params.set("file_search", filters.diskSearch);
+    } else if (activeTabName === "clients" && filters.clientSearch) {
+      params.set("client_search", filters.clientSearch);
+    } else if (activeTabName === "deals") {
+      if (filters.dealSearch) params.set("deal_search", filters.dealSearch);
+      if (filters.dealStatus !== "all") params.set("deal_status", filters.dealStatus);
+    }
     const data = await apiRequest(`crm.php?${params.toString()}`);
     if (data?.data) {
       state = {
@@ -252,8 +218,8 @@
     }
   };
 
-  const refreshAndRender = async () => {
-    await loadData();
+  const refreshAndRender = async (entities = getEntitiesForActiveTab()) => {
+    await loadData(entities);
     renderAll();
   };
 
@@ -268,18 +234,6 @@
     const d = new Date(isoDate);
     if (Number.isNaN(d.getTime())) return "-";
     return d.toLocaleDateString("ru-RU");
-  };
-
-  const formatDateTime = (isoDate) => {
-    const d = new Date(isoDate);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const formatFileSize = (bytes) => {
@@ -361,13 +315,17 @@
 
   const isActiveDeal = (deal) => Number(deal.is_archived) !== 1 && (deal.status === "new" || deal.status === "in_progress");
 
+  let activeTabName = "overview";
+
   const setActiveTab = (tabName) => {
+    activeTabName = tabName;
     tabButtons.forEach((button) => {
       button.classList.toggle("is-active", button.dataset.tabTarget === tabName);
     });
     panels.forEach((panel) => {
       panel.classList.toggle("is-active", panel.dataset.tabPanel === tabName);
     });
+    renderActivePanel();
   };
 
   tabButtons.forEach((button) => {
@@ -403,9 +361,7 @@
         await onSubmit(formData);
         closeEditModal();
         await refreshAndRender();
-        setMessage("Изменения сохранены.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     };
   };
@@ -1066,6 +1022,8 @@
     kanbanBoard.innerHTML = pipelineStages
       .map((stage) => {
         const deals = filteredDeals.filter((deal) => (deal.pipeline_stage || "order_received") === stage.key);
+        const visibleLimit = stageCardLimits[stage.key] || DEFAULT_STAGE_CARD_LIMIT;
+        const visibleDeals = deals.slice(0, visibleLimit);
         const amount = deals.reduce((sum, deal) => sum + Number(deal.amount || 0), 0);
         const meta = stageMeta[stage.key] || { playbook: "" };
 
@@ -1084,7 +1042,7 @@
             <div class="kanban-list">
               ${
                 deals.length
-                  ? deals
+                  ? visibleDeals
                       .map((deal) => {
                         const client = clientById(deal.client_id);
                         const worker = workerById(deal.worker_id);
@@ -1126,6 +1084,11 @@
                       })
                       .join("")
                   : '<p class="empty-state">Нет сделок</p>'
+              }
+              ${
+                deals.length > visibleDeals.length
+                  ? `<button class="btn btn-line btn-small kanban-more-btn" type="button" data-expand-stage="${stage.key}">Показать еще ${deals.length - visibleDeals.length}</button>`
+                  : ""
               }
             </div>
           </article>
@@ -1352,123 +1315,11 @@
       .join("");
   };
 
-  const withCanvasCtx = (canvas, drawFn) => {
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const width = Math.floor(rect.width * dpr);
-    const height = Math.floor(rect.height * dpr);
-
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    drawFn(ctx, rect.width, rect.height);
-  };
-
-  const drawAxes = (ctx, width, height, margin = 28) => {
-    ctx.strokeStyle = "rgba(30, 54, 84, 0.26)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(margin, margin);
-    ctx.lineTo(margin, height - margin);
-    ctx.lineTo(width - margin, height - margin);
-    ctx.stroke();
-  };
-
-  const renderStageChart = () => {
-    withCanvasCtx(stageChartCanvas, (ctx, width, height) => {
-      const margin = 34;
-      const labelsWidth = 178;
-      const chartWidth = width - margin * 2 - labelsWidth;
-      const barAreaHeight = height - margin * 2;
-      const rowHeight = barAreaHeight / pipelineStages.length;
-      const counts = pipelineStages.map((stage) =>
-        state.deals.filter((deal) => Number(deal.is_archived) !== 1 && (deal.pipeline_stage || "order_received") === stage.key).length
-      );
-      const max = Math.max(...counts, 1);
-
-      pipelineStages.forEach((stage, index) => {
-        const count = counts[index];
-        const ratio = count / max;
-        const y = margin + index * rowHeight + 10;
-        const barHeight = Math.max(18, rowHeight - 20);
-        const x = margin + labelsWidth;
-        const barWidth = Math.max(6, chartWidth * ratio);
-
-        ctx.fillStyle = "#35506f";
-        ctx.font = "12px Commissioner, sans-serif";
-        ctx.textBaseline = "middle";
-        ctx.fillText(stage.label, margin, y + barHeight / 2);
-
-        ctx.fillStyle = "rgba(31, 120, 216, 0.12)";
-        ctx.fillRect(x, y, chartWidth, barHeight);
-
-        const grd = ctx.createLinearGradient(x, y, x + barWidth, y);
-        grd.addColorStop(0, "#1f78d8");
-        grd.addColorStop(1, "#44b27a");
-        ctx.fillStyle = grd;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        ctx.fillStyle = "#1e2c3a";
-        ctx.font = "700 12px Commissioner, sans-serif";
-        ctx.fillText(`${count}`, x + barWidth + 8, y + barHeight / 2);
-      });
-    });
-  };
-
-  const renderActivityChart = () => {
-    withCanvasCtx(activityChartCanvas, (ctx, width, height) => {
-      const margin = 34;
-      const chartWidth = width - margin * 2;
-      const chartHeight = height - margin * 2;
-      const items = [
-        { label: "Новые", value: state.deals.filter((deal) => deal.status === "new" && Number(deal.is_archived) !== 1).length, color: "#3c8df0" },
-        { label: "В работе", value: state.deals.filter((deal) => deal.status === "in_progress" && Number(deal.is_archived) !== 1).length, color: "#f0a21b" },
-        { label: "Завершены", value: state.deals.filter((deal) => deal.status === "won" && Number(deal.is_archived) !== 1).length, color: "#3fab73" },
-        { label: "В архиве", value: state.deals.filter((deal) => Number(deal.is_archived) === 1).length, color: "#74849a" },
-      ];
-      const max = Math.max(...items.map((item) => item.value), 1);
-      const barWidth = chartWidth / items.length - 18;
-
-      drawAxes(ctx, width, height, margin);
-
-      items.forEach((item, index) => {
-        const ratio = item.value / max;
-        const x = margin + index * (barWidth + 18) + 9;
-        const barH = Math.max(8, chartHeight * ratio);
-        const y = height - margin - barH;
-
-        ctx.fillStyle = item.color;
-        ctx.fillRect(x, y, barWidth, barH);
-
-        ctx.fillStyle = "#1e2c3a";
-        ctx.font = "700 12px Commissioner, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(String(item.value), x + barWidth / 2, y - 8);
-
-        ctx.fillStyle = "#35506f";
-        ctx.font = "12px Commissioner, sans-serif";
-        ctx.fillText(item.label, x + barWidth / 2, height - margin + 16);
-      });
-
-      ctx.textAlign = "start";
-    });
-  };
-
   const renderOverview = () => {
     if (!overviewCards) return;
     const activeDeals = state.deals.filter((deal) => isActiveDeal(deal));
     const archivedDeals = state.deals.filter((deal) => Number(deal.is_archived) === 1);
     const totalDeals = state.deals.length;
-    const doneDeals = state.deals.filter((deal) => deal.status === "won").length;
     const pipeline = activeDeals.reduce((sum, deal) => sum + Number(deal.amount || 0), 0);
     const todayDeadlines = activeDeals.filter((deal) => String(deal.expected_date || "") === todayISO).length;
     const noOwnerDeals = activeDeals.filter((deal) => !deal.worker_id).length;
@@ -1483,9 +1334,8 @@
     }
 
     overviewCards.innerHTML = [
-      { value: formatMoney(pipeline), label: "Портфель в работе" },
+      { value: formatMoney(pipeline), label: "Сумма в работе" },
       { value: activeDeals.length, label: "Активные сделки" },
-      { value: doneDeals, label: "Завершенные договоры" },
       { value: state.clients.length, label: "Клиенты" },
       { value: state.workers.length, label: "Сотрудники" },
       { value: monthCreatedDeals, label: "Новых сделок за месяц" },
@@ -1503,7 +1353,7 @@
       overviewFocus.innerHTML = `
         <div class="overview-focus-copy">
           <p class="overview-focus-kicker">Главный фокус дня</p>
-          <h3>${noOwnerDeals > 0 ? "Требуют назначения ответственного" : "Воронка под контролем"}</h3>
+          <h3>${noOwnerDeals > 0 ? "Требуют назначения ответственного" : "Работа под контролем"}</h3>
           <p>${
             noOwnerDeals > 0
               ? `Сейчас ${noOwnerDeals} ${noOwnerDeals === 1 ? "сделка осталась" : "сделки остались"} без ответственного. Это главный риск потери темпа.`
@@ -1515,16 +1365,76 @@
             <strong>${todayDeadlines}</strong>
             <span>сроков сегодня</span>
           </div>
-          <div>
-            <strong>${archivedDeals.length}</strong>
-            <span>в архиве</span>
-          </div>
-          <div>
-            <strong>${state.workers.length}</strong>
-            <span>сотрудников в CRM</span>
-          </div>
         </div>
       `;
+    }
+
+    if (overviewStageMap) {
+      const stageCounts = pipelineStages.map((stage) => ({
+        ...stage,
+        count: activeDeals.filter((deal) => (deal.pipeline_stage || "order_received") === stage.key).length,
+        amount: activeDeals
+          .filter((deal) => (deal.pipeline_stage || "order_received") === stage.key)
+          .reduce((sum, deal) => sum + Number(deal.amount || 0), 0),
+      }));
+      const maxStageCount = Math.max(...stageCounts.map((stage) => stage.count), 1);
+
+      overviewStageMap.innerHTML = stageCounts
+        .map((stage, index) => {
+          const progress = Math.max(4, Math.round((stage.count / maxStageCount) * 100));
+          return `
+            <article class="overview-stage-row">
+              <div class="overview-stage-number">${index + 1}</div>
+              <div class="overview-stage-content">
+                <div class="overview-stage-title">
+                  <strong>${escapeHtml(stage.label)}</strong>
+                  <span>${stage.count} сдел.</span>
+                </div>
+                <div class="overview-stage-track">
+                  <i style="width: ${progress}%"></i>
+                </div>
+                <p>${formatMoney(stage.amount)}</p>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+    }
+
+    if (overviewStatusMap) {
+      const statusItems = [
+        {
+          label: "Новые",
+          value: state.deals.filter((deal) => deal.status === "new" && Number(deal.is_archived) !== 1).length,
+          className: "is-new",
+        },
+        {
+          label: "В работе",
+          value: state.deals.filter((deal) => deal.status === "in_progress" && Number(deal.is_archived) !== 1).length,
+          className: "is-progress",
+        },
+        {
+          label: "Завершены",
+          value: state.deals.filter((deal) => deal.status === "won" && Number(deal.is_archived) !== 1).length,
+          className: "is-won",
+        },
+        {
+          label: "В архиве",
+          value: archivedDeals.length,
+          className: "is-archive",
+        },
+      ];
+      const totalStatus = Math.max(statusItems.reduce((sum, item) => sum + item.value, 0), 1);
+
+      overviewStatusMap.innerHTML = statusItems
+        .map((item) => `
+          <article class="overview-status-tile ${item.className}">
+            <span>${item.label}</span>
+            <strong>${item.value}</strong>
+            <i>${Math.round((item.value / totalStatus) * 100)}%</i>
+          </article>
+        `)
+        .join("");
     }
 
     if (overviewDeadlines) {
@@ -1583,8 +1493,8 @@
           action: "calendar",
         },
         {
-          title: "Документы компании",
-          meta: `${state.company_files.length} в диске`,
+          title: "Файлы компании",
+          meta: `${state.company_files.length} файлов`,
           action: "disk",
         },
         {
@@ -1606,19 +1516,40 @@
         .join("");
     }
 
-    renderStageChart();
-    renderActivityChart();
+  };
+
+  const renderActivePanel = () => {
+    switch (activeTabName) {
+      case "clients":
+        renderClients();
+        break;
+      case "workers":
+        renderWorkers();
+        break;
+      case "deals":
+        renderKanban();
+        break;
+      case "attendance":
+        renderAttendance();
+        break;
+      case "progress":
+        renderProductions();
+        break;
+      case "calendar":
+        renderCalendar();
+        break;
+      case "disk":
+        renderCompanyFiles();
+        break;
+      case "overview":
+      default:
+        renderOverview();
+        break;
+    }
   };
 
   const renderAll = () => {
-    renderClients();
-    renderWorkers();
-    renderKanban();
-    renderAttendance();
-    renderProductions();
-    renderCalendar();
-    renderCompanyFiles();
-    renderOverview();
+    renderActivePanel();
   };
 
   if (createClientBtn) createClientBtn.addEventListener("click", openCreateClientModal);
@@ -1638,7 +1569,6 @@
       const formData = new FormData(calendarMonthForm);
       const month = normalizeReportMonth(formData.get("calendarMonth"));
       if (!month) {
-        setMessage("Укажите месяц в формате ГГГГ-ММ.", "is-error");
         return;
       }
       filters.calendarMonth = month;
@@ -1649,26 +1579,25 @@
 
       try {
         await refreshAndRender();
-        setMessage(`Календарь за ${month} загружен.`, "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
 
   if (dealFilterForm) {
-    dealFilterForm.addEventListener("input", () => {
+    const updateDealFilters = async () => {
       filters.dealSearch = String(dealSearchInput?.value || "").trim();
       filters.dealStatus = String(dealStatusFilter?.value || "all");
       filters.dealRisk = String(dealRiskFilter?.value || "all");
-      renderKanban();
-    });
-    dealFilterForm.addEventListener("change", () => {
-      filters.dealSearch = String(dealSearchInput?.value || "").trim();
-      filters.dealStatus = String(dealStatusFilter?.value || "all");
-      filters.dealRisk = String(dealRiskFilter?.value || "all");
-      renderKanban();
-    });
+      try {
+        await refreshAndRender();
+      } catch (error) {
+        reportError("Ошибка фильтрации сделок", error);
+      }
+    };
+    const updateDealFiltersDebounced = debounce(updateDealFilters);
+    dealFilterForm.addEventListener("input", updateDealFiltersDebounced);
+    dealFilterForm.addEventListener("change", updateDealFilters);
   }
 
   if (calendarPrevBtn) {
@@ -1679,7 +1608,6 @@
       try {
         await refreshAndRender();
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
@@ -1692,16 +1620,30 @@
       try {
         await refreshAndRender();
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
 
   if (diskFilterForm) {
-    diskFilterForm.addEventListener("input", () => {
+    diskFilterForm.addEventListener("input", debounce(async () => {
       filters.diskSearch = String(diskSearchInput?.value || "").trim();
-      renderCompanyFiles();
-    });
+      try {
+        await refreshAndRender(["company_files"]);
+      } catch (error) {
+        reportError("Ошибка поиска файлов", error);
+      }
+    }));
+  }
+
+  if (clientFilterForm) {
+    clientFilterForm.addEventListener("input", debounce(async () => {
+      filters.clientSearch = String(clientSearchInput?.value || "").trim();
+      try {
+        await refreshAndRender(["clients", "deals"]);
+      } catch (error) {
+        reportError("Ошибка поиска клиентов", error);
+      }
+    }));
   }
 
   if (attendanceFilterForm) {
@@ -1714,9 +1656,7 @@
       if (attendanceDateInput) attendanceDateInput.value = picked;
       try {
         await refreshAndRender();
-        setMessage(`Табель на ${formatDate(picked)} загружен.`);
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
@@ -1727,7 +1667,6 @@
       const formData = new FormData(attendanceReportForm);
       const month = normalizeReportMonth(formData.get("attendanceMonth"));
       if (!/^\d{4}-\d{2}$/.test(month)) {
-        setMessage("Укажите месяц отчета в формате ГГГГ-ММ.", "is-error");
         return;
       }
 
@@ -1746,9 +1685,7 @@
         link.click();
         link.remove();
         URL.revokeObjectURL(downloadUrl);
-        setMessage(`Отчет за ${month} скачан.`, "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
@@ -1763,9 +1700,7 @@
       if (productionDateInput) productionDateInput.value = picked;
       try {
         await refreshAndRender();
-        setMessage(`Выпуск изделий на ${formatDate(picked)} загружен.`);
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     });
   }
@@ -1798,6 +1733,13 @@
       return;
     }
 
+    const expandStage = target.dataset.expandStage;
+    if (expandStage) {
+      stageCardLimits[expandStage] = (stageCardLimits[expandStage] || DEFAULT_STAGE_CARD_LIMIT) + DEFAULT_STAGE_CARD_LIMIT;
+      renderKanban();
+      return;
+    }
+
     const clientRow = target.closest("[data-open-client-deals-row]");
     if (clientRow instanceof HTMLElement && !target.closest(".actions-cell")) {
       openClientDealsModal(clientRow.dataset.openClientDealsRow);
@@ -1824,9 +1766,7 @@
       try {
         await apiRequest(`crm.php?entity=clients&id=${encodeURIComponent(removeClientId)}`, { method: "DELETE" });
         await refreshAndRender();
-        setMessage("Клиент удален.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1836,9 +1776,7 @@
       try {
         await apiRequest(`crm.php?entity=workers&id=${encodeURIComponent(removeWorkerId)}`, { method: "DELETE" });
         await refreshAndRender();
-        setMessage("Сотрудник удален.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1848,9 +1786,7 @@
       try {
         await apiRequest(`crm.php?entity=deals&id=${encodeURIComponent(removeDealId)}`, { method: "DELETE" });
         await refreshAndRender();
-        setMessage("Сделка удалена.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1860,9 +1796,7 @@
       try {
         await apiRequest(`crm.php?entity=deals&id=${encodeURIComponent(markLostId)}`, { method: "DELETE" });
         await refreshAndRender();
-        setMessage("Сделка отменена и удалена.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1891,9 +1825,7 @@
           }),
         });
         await refreshAndRender();
-        setMessage("Этап сделки обновлен.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1921,9 +1853,7 @@
           }),
         });
         await refreshAndRender();
-        setMessage("Сделка переведена в архив.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1935,9 +1865,7 @@
           method: "DELETE",
         });
         await refreshAndRender();
-        setMessage("Запись табеля удалена.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1949,9 +1877,7 @@
           method: "DELETE",
         });
         await refreshAndRender();
-        setMessage("Запись выпуска удалена.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1974,9 +1900,7 @@
           }),
         });
         await refreshAndRender();
-        setMessage("Статус памятки обновлен.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -1991,9 +1915,7 @@
           { method: "DELETE" }
         );
         await refreshAndRender();
-        setMessage("Памятка удалена.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
       return;
     }
@@ -2009,9 +1931,7 @@
       try {
         await apiRequest(`crm.php?entity=company_files&id=${encodeURIComponent(removeFileId)}`, { method: "DELETE" });
         await refreshAndRender();
-        setMessage("Файл удален из диска.", "is-success");
       } catch (error) {
-        setMessage(error.message, "is-error");
       }
     }
   });
@@ -2064,22 +1984,14 @@
         }),
       });
       await refreshAndRender();
-      setMessage("Сделка перенесена по воронке.", "is-success");
     } catch (error) {
-      setMessage(error.message, "is-error");
     }
-  });
-
-  window.addEventListener("resize", () => {
-    renderStageChart();
-    renderActivityChart();
   });
 
   const init = async () => {
     setActiveTab("overview");
     try {
       await refreshAndRender();
-      setMessage("Данные синхронизированы с БД.");
     } catch (error) {
       reportError("Ошибка инициализации", error);
     }
@@ -2094,4 +2006,6 @@
   });
 
   init();
-})();
+};
+
+startDashboard();

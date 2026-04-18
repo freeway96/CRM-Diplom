@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="logout" viewBox="0 0 24 24">
+    <path d="M14 7L19 12L14 17" />
+    <path d="M19 12H9" />
+    <path d="M10 4H7C5.89543 4 5 4.89543 5 6V18C5 19.1046 5.89543 20 7 20H10" />
+  </symbol>
+  <symbol id="overview" viewBox="0 0 24 24">
+    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h4A1.5 1.5 0 0 1 11 5.5v4A1.5 1.5 0 0 1 9.5 11h-4A1.5 1.5 0 0 1 4 9.5v-4Z" />
+    <path d="M13 5.5A1.5 1.5 0 0 1 14.5 4h4A1.5 1.5 0 0 1 20 5.5v4A1.5 1.5 0 0 1 18.5 11h-4A1.5 1.5 0 0 1 13 9.5v-4Z" />
+    <path d="M4 14.5A1.5 1.5 0 0 1 5.5 13h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9.5 20h-4A1.5 1.5 0 0 1 4 18.5v-4Z" />
+    <path d="M13 14.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4Z" />
+  </symbol>
+  <symbol id="funnel" viewBox="0 0 24 24">
+    <path d="M5 6h4v12H5z" />
+    <path d="M10 8h4v10h-4z" />
+    <path d="M15 10h4v8h-4z" />
+  </symbol>
+  <symbol id="calendar" viewBox="0 0 24 24">
+    <path d="M7 3v4" />
+    <path d="M17 3v4" />
+    <path d="M4.5 8h15" />
+    <path d="M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+    <path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01" />
+  </symbol>
+  <symbol id="disk" viewBox="0 0 24 24">
+    <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H10l2 2h5.5A2.5 2.5 0 0 1 20 9.5v7A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" />
+    <path d="M4 10h16" />
+  </symbol>
+  <symbol id="clients" viewBox="0 0 24 24">
+    <path d="M8 20v-8h8v8" />
+    <path d="M5 20V8l7-4 7 4v12" />
+    <path d="M10 12h4" />
+    <path d="M10 16h4" />
+  </symbol>
+  <symbol id="workers" viewBox="0 0 24 24">
+    <path d="M16 19c0-2.2-1.8-4-4-4s-4 1.8-4 4" />
+    <path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+    <path d="M20 18c0-1.7-1.1-3.1-2.6-3.7" />
+    <path d="M17 7.2a2.5 2.5 0 0 1 0 4.6" />
+  </symbol>
+  <symbol id="progress" viewBox="0 0 24 24">
+    <path d="M5 6h14" />
+    <path d="M5 12h10" />
+    <path d="M5 18h8" />
+    <path d="m16 17 2 2 4-5" />
+  </symbol>
+  <symbol id="attendance" viewBox="0 0 24 24">
+    <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
+    <path d="M12 8v5l3 2" />
+  </symbol>
+</svg>

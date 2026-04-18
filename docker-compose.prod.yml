@@ -1,0 +1,61 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: crm-diplom-frontend:local
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - crm-network
+    depends_on:
+      - backend
+
+  backend:
+    image: php:8.2-apache
+    environment:
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-crm_db}
+      DB_USER: ${DB_USER:-crm_user}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - ./backend/api:/var/www/html/api:ro
+      - crm_uploads:/var/www/html/api/uploads
+    networks:
+      - crm-network
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    command: >
+      bash -lc "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
+
+  database:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD in .env}
+      MARIADB_DATABASE: ${DB_NAME:-crm_db}
+      MARIADB_USER: ${DB_USER:-crm_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./database/sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - crm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+networks:
+  crm-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
+  crm_uploads:
+    driver: local

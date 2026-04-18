@@ -79,6 +79,15 @@ function ensure_schema(PDO $pdo): void
         ");
     }
 
+    $loginPasswordLength = (int) ($pdo->query("
+        SELECT CHARACTER_MAXIMUM_LENGTH AS len
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'login' AND COLUMN_NAME = 'Password'
+    ")->fetch()["len"] ?? 0);
+    if ($loginPasswordLength > 0 && $loginPasswordLength < 255) {
+        $pdo->exec("ALTER TABLE login MODIFY Password VARCHAR(255) NOT NULL");
+    }
+
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clients (
             id INT NOT NULL AUTO_INCREMENT,
@@ -359,4 +368,33 @@ function ensure_schema(PDO $pdo): void
             CONSTRAINT fk_company_files_user FOREIGN KEY (uploaded_by) REFERENCES login(ID) ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
     ");
+
+    $ensureIndex = static function (PDO $pdo, string $table, string $index, string $columns): void {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM INFORMATION_SCHEMA.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :table_name
+              AND INDEX_NAME = :index_name
+        ");
+        $stmt->execute([
+            ":table_name" => $table,
+            ":index_name" => $index,
+        ]);
+        $exists = (int) ($stmt->fetch()["cnt"] ?? 0);
+        if ($exists > 0) {
+            return;
+        }
+
+        $safeTable = str_replace("`", "``", $table);
+        $safeIndex = str_replace("`", "``", $index);
+        $pdo->exec("CREATE INDEX `{$safeIndex}` ON `{$safeTable}` ({$columns})");
+    };
+
+    $ensureIndex($pdo, "deals", "idx_deals_archive_status", "is_archived, status");
+    $ensureIndex($pdo, "deals", "idx_deals_expected_date", "expected_date");
+    $ensureIndex($pdo, "deals", "idx_deals_created_at", "created_at");
+    $ensureIndex($pdo, "calendar_notes", "idx_calendar_note_date", "note_date");
+    $ensureIndex($pdo, "clients", "idx_clients_name", "name");
+    $ensureIndex($pdo, "company_files", "idx_company_files_name", "file_name");
 }

@@ -1,6 +1,6 @@
 (() => {
   const SESSION_KEY = "crm_auth_user";
-  const API_BASE = `${window.location.protocol}//${window.location.hostname}:8084/api`;
+  const API_BASE = `/api`;
 
   const form = document.querySelector("[data-login-form]");
   const loginInput = document.querySelector("[data-login-input]");
@@ -57,7 +57,7 @@
       setMessage("Вход выполнен. Перенаправление...", "is-success");
       window.location.replace("dashboard.html");
     } catch (error) {
-      setMessage("API недоступен. Проверьте контейнер backend на порту 8084.", "is-error");
+      setMessage("API недоступен. Проверьте контейнер backend.", "is-error");
     }
   });
 })();

@@ -1,89 +1,139 @@
-# 🏢 CRM-система
+# CRM-система предприятия
 
-> Дипломный проект Лачугина Ивана Дмитриевича, группа ИС(б)-21
+Дипломный проект Лачугина Ивана Дмитриевича, группа ИС(б)-21.
 
-  [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/ru/docs/Web/HTML)
-  [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/ru/docs/Web/CSS)
-  [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/ru/docs/Web/JavaScript)
-  [![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
-  [![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)](https://mariadb.org/)
-  [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-  [![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)](https://nginx.org/)
-  
-  [![Build Status](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml/badge.svg)](https://github.com/freeway96/CRM-Diplom/actions/workflows/docker-build.yml)
-  [![Docker Pulls](https://img.shields.io/badge/docker%20pulls-1.2k-blue)](https://hub.docker.com/r/freeway96/crm-diplom)
----
+## Описание
 
-## 📝 Описание проекта
+CRM-система предприятия - веб-приложение для учета клиентов, сделок, договоров, сроков, сотрудников, табеля, выполненных работ и файлов компании. Интерфейс сделан как единый рабочий кабинет: обзор, CRM-воронка, календарь памяток, файлы, клиенты, сотрудники, учет и табель связаны между собой через общую базу данных.
 
-**CRM-система** — это веб-приложение, разработанное в рамках дипломного проектирования. Система предназначена для автоматизации взаимодействия с клиентами, учёта заказов и ведения базы контрагентов. Проект реализован на чистом **HTML, CSS и JavaScript** (frontend) с контейнеризацией через **Docker** и веб-сервером **Nginx** для раздачи статических файлов.
+Проект работает локально без внешних CDN: шрифты, иконки, изображения и favicon находятся в папке `frontend/public/assets`.
 
-Основная цель — создать удобный интерфейс для работы с клиентской базой и историей обращений, который может быть легко развёрнут в любой среде благодаря Docker.
+## Основные возможности
 
----
+- Обзор предприятия с ключевыми показателями, ближайшими сроками и статусами сделок.
+- CRM-воронка по этапам договора: поступление заказа, формировка договора, получение предоплаты, создание товара, готовность транспортировки, завершение договора.
+- Карточки сделок с клиентом, ответственным, суммой, приоритетом, сроком и переходом по этапам.
+- Календарь памяток с отметками выполнения и сроками договоров из воронки.
+- Раздел файлов компании с загрузкой, поиском, скачиванием и удалением документов.
+- Раздел клиентов с открытием истории работ по компании: активные и завершенные сделки.
+- Управление сотрудниками, табелем и учетом выполненного.
+- Авторизация через backend API и хранение данных в MariaDB.
+- Серверная фильтрация по клиентам, сделкам и файлам.
+- Минифицированные CSS/JS-файлы для снижения нагрузки на страницу.
+- Production-конфигурация Docker без публичного доступа к backend, базе данных и phpMyAdmin.
 
-## ✨ Основные возможности
+## Технологии
 
-- 📇 Управление карточками клиентов (добавление, редактирование, удаление)
-- 📦 Учёт заказов и сделок
-- 📊 Визуализация основных показателей (планируется)
-- 🔐 Базовая аутентификация
-- 📱 Адаптивный интерфейс для всех устройств
+| Компонент | Технологии |
+| --- | --- |
+| Frontend | HTML, CSS, JavaScript ES Modules |
+| Backend | PHP API |
+| База данных | MariaDB |
+| Веб-сервер | Nginx |
+| Контейнеризация | Docker, Docker Compose |
+| Сборка ассетов | terser, clean-css-cli |
 
----
+## Структура проекта
 
-## 🛠 Технологии
+```text
+backend/api/                  Backend API CRM
+frontend/public/              Публичные файлы сайта
+frontend/public/CRM/          Интерфейс CRM
+frontend/public/CRM/js/       Модули dashboard
+frontend/public/assets/       Локальные шрифты, изображения и иконки
+frontend/nginx/default.conf   Nginx-конфигурация frontend и proxy /api
+database/sql/                 SQL-скрипты базы
+scripts/build-assets.sh       Сборка минифицированных CSS/JS
+docker-compose.yml            Локальный запуск
+docker-compose.dev.yml        Режим разработки
+docker-compose.prod.yml       Более закрытая production-схема
+```
 
-| Технология | Назначение |
-|------------|------------|
-| HTML5      | Структура веб-страниц |
-| CSS3       | Стилизация и адаптивность |
-| JavaScript | Логика фронтенда, взаимодействие с пользователем |
-| PHP        | Backend API для CRM |
-| SQL (MariaDB/MySQL) | Хранение данных CRM и запросы к БД |
-| Docker     | Контейнеризация приложения |
-| Nginx      | Веб-сервер для раздачи статических файлов |
+## Запуск локально
 
----
+```bash
+docker compose up -d --build
+```
 
+После запуска:
 
----
+- Сайт: `http://localhost:8080`
+- CRM: `http://localhost:8080/CRM/dashboard.html`
+- phpMyAdmin: `http://localhost:8081`
+- Backend API внутри frontend: `http://localhost:8080/api/crm.php`
+- Backend API напрямую в локальном режиме: `http://localhost:8084/api/crm.php`
 
-## 🚀 Запуск проекта
+Проверка контейнеров:
 
-### Предварительные требования
+```bash
+docker compose ps
+```
 
-- Установленный [Docker](https://www.docker.com/products/docker-desktop)
-- Установленный [Git](https://git-scm.com/)
+## Сборка frontend-ассетов
 
-### Инструкция по запуску
+После изменения `dashboard.js`, модулей в `frontend/public/CRM/js/` или `dashboard.css` нужно пересобрать минифицированные файлы:
 
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/freeway96/CRM-Diplom
-   cd CRM-Diplom
+```bash
+./scripts/build-assets.sh
+```
 
-2. Запуск репозитория:
-    ```bash
-    docker compose up -d
-    docker compose ps
+Затем перезапустить frontend-контейнер:
 
-Все три контейнера должны быть в статусе ``up``
+```bash
+docker compose up -d --build frontend
+```
 
-3. Открой браузер и перейди по ссылке 
+## Режим разработки
 
-- Сайт: http://localhost:8080
-- phpMyAdmin: http://localhost:8081
-- API: http://localhost:8084/api/crm.php
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
 
-4. Обновление файлов в Docker:
-    ```bash 
-        docker compose down
-        git pull
-        docker compose up -d
-Все выполняется в папке проекта
+Остановить dev-режим:
 
-5. Режим разработчика:
-    ```bash
-    docker compose -f docker-compose.dev.yml up -d
-    docker compose -f docker-compose.dev.yml down
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+## Production-запуск
+
+Для более безопасной выкладки используется `docker-compose.prod.yml`: наружу публикуется только frontend, а backend и база остаются во внутренней Docker-сети.
+
+Перед запуском нужно задать переменные окружения:
+
+```bash
+export DB_PASSWORD='your_db_password'
+export MARIADB_ROOT_PASSWORD='your_root_password'
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+## Контроль качества
+
+Проверка JavaScript:
+
+```bash
+node --input-type=module --check < frontend/public/CRM/dashboard.js
+node --input-type=module --check < frontend/public/CRM/js/dashboard-data.js
+node --input-type=module --check < frontend/public/CRM/js/dashboard-utils.js
+node --check frontend/public/CRM/login.js
+node --check frontend/public/script.js
+```
+
+Проверка PHP внутри контейнера:
+
+```bash
+docker compose exec -T backend php -l /var/www/html/api/crm.php
+docker compose exec -T backend php -l /var/www/html/api/bootstrap.php
+docker compose exec -T backend php -l /var/www/html/api/login.php
+```
+
+Проверка Docker-конфигураций:
+
+```bash
+docker compose config -q
+DB_PASSWORD=123456789 MARIADB_ROOT_PASSWORD=new_password docker compose -f docker-compose.prod.yml config -q
+```
+
+## Почему проект имеет практическую ценность
+
+Система закрывает типовой рабочий цикл малого или среднего предприятия: от поступления заказа и формирования договора до контроля предоплаты, готовности товара, транспортировки, архивации договора и хранения файлов. В отличие от универсальных CRM, проект адаптирован под конкретный процесс предприятия и показывает взаимосвязь между воронкой, календарем, клиентами, файлами и отчетными разделами.

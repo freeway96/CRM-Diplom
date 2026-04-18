@@ -15,6 +15,15 @@ $productionDate = trim((string) ($_GET["production_date"] ?? ""));
 $reportMonth = trim((string) ($_GET["month"] ?? ""));
 $calendarMonth = trim((string) ($_GET["calendar_month"] ?? ""));
 $userId = isset($_GET["user_id"]) ? (int) $_GET["user_id"] : 0;
+$search = trim((string) ($_GET["search"] ?? ""));
+$clientSearch = trim((string) ($_GET["client_search"] ?? $search));
+$dealSearch = trim((string) ($_GET["deal_search"] ?? $search));
+$fileSearch = trim((string) ($_GET["file_search"] ?? $search));
+$dealStatus = trim((string) ($_GET["deal_status"] ?? "all"));
+$requestedEntities = array_values(array_filter(array_map(
+    static fn($item) => trim((string) $item),
+    explode(",", (string) ($_GET["entities"] ?? ""))
+)));
 
 const UPLOAD_ROOT_PRIMARY = __DIR__ . "/uploads";
 const UPLOAD_ROOT_FALLBACK = "/tmp/crm_uploads";
@@ -81,6 +90,11 @@ function normalize_month_range(string $month): array
     $startDate = $month . "-01";
     $endDate = date("Y-m-t", strtotime($startDate));
     return [$startDate, $endDate];
+}
+
+function should_load_entity(array $requestedEntities, string $entity): bool
+{
+    return empty($requestedEntities) || in_array($entity, $requestedEntities, true);
 }
 
 if ($method === "GET") {
@@ -182,97 +196,151 @@ if ($method === "GET") {
         exit;
     }
 
-    $clients = $pdo->query("SELECT id, name, contact, phone, created_at FROM clients ORDER BY id DESC")->fetchAll();
-    $workers = $pdo->query("SELECT id, name, role, created_at FROM workers ORDER BY id DESC")->fetchAll();
-    $deals = $pdo->query("
-        SELECT id, client_id, worker_id, order_name, details, amount, status, priority, next_action_text, next_action_date, pipeline_stage, stage_updated_at, expected_date, is_archived, archived_at, created_at
-        FROM deals
-        ORDER BY id DESC
-    ")->fetchAll();
+    $responseData = [];
 
-    if ($attendanceDate !== "") {
-        $stmt = $pdo->prepare("
-            SELECT id, worker_id, work_date, status, overtime_hours, created_at
-            FROM attendance
-            WHERE work_date = :work_date
-            ORDER BY id DESC
-        ");
-        $stmt->execute([":work_date" => $attendanceDate]);
-        $attendance = $stmt->fetchAll();
-    } else {
-        $attendance = $pdo->query("
-            SELECT id, worker_id, work_date, status, overtime_hours, created_at
-            FROM attendance
-            ORDER BY id DESC
-        ")->fetchAll();
-    }
-
-    if ($productionDate !== "") {
-        $stmt = $pdo->prepare("
-            SELECT id, product_name, quantity, produced_date, created_at
-            FROM productions
-            WHERE produced_date = :produced_date
-            ORDER BY id DESC
-        ");
-        $stmt->execute([":produced_date" => $productionDate]);
-        $productions = $stmt->fetchAll();
-    } else {
-        $productions = $pdo->query("
-            SELECT id, product_name, quantity, produced_date, created_at
-            FROM productions
-            ORDER BY id DESC
-        ")->fetchAll();
-    }
-
-    $calendarSql = "
-        SELECT id, user_id, note_date, title, description, is_done, created_at
-        FROM calendar_notes
-    ";
-    $calendarParams = [];
-    $calendarWhere = [];
-
-    if ($userId > 0) {
-        $calendarWhere[] = "user_id = :calendar_user_id";
-        $calendarParams[":calendar_user_id"] = $userId;
-    }
-
-    if ($calendarMonth !== "") {
-        [$calendarStart, $calendarEnd] = normalize_month_range($calendarMonth);
-        if ($calendarStart === "" || $calendarEnd === "") {
-            json_response(["ok" => false, "message" => "Некорректный месяц календаря."], 400);
+    if (should_load_entity($requestedEntities, "clients")) {
+        if ($clientSearch !== "") {
+            $stmt = $pdo->prepare("
+                SELECT id, name, contact, phone, created_at
+                FROM clients
+                WHERE name LIKE :search OR contact LIKE :search OR phone LIKE :search
+                ORDER BY id DESC
+            ");
+            $stmt->execute([":search" => "%" . $clientSearch . "%"]);
+            $responseData["clients"] = $stmt->fetchAll();
+        } else {
+            $responseData["clients"] = $pdo->query("SELECT id, name, contact, phone, created_at FROM clients ORDER BY id DESC")->fetchAll();
         }
-        $calendarWhere[] = "note_date BETWEEN :calendar_start AND :calendar_end";
-        $calendarParams[":calendar_start"] = $calendarStart;
-        $calendarParams[":calendar_end"] = $calendarEnd;
     }
 
-    if (!empty($calendarWhere)) {
-        $calendarSql .= " WHERE " . implode(" AND ", $calendarWhere);
+    if (should_load_entity($requestedEntities, "workers")) {
+        $responseData["workers"] = $pdo->query("SELECT id, name, role, created_at FROM workers ORDER BY id DESC")->fetchAll();
     }
-    $calendarSql .= " ORDER BY note_date ASC, id DESC";
 
-    $calendarStmt = $pdo->prepare($calendarSql);
-    $calendarStmt->execute($calendarParams);
-    $calendarNotes = $calendarStmt->fetchAll();
+    if (should_load_entity($requestedEntities, "deals")) {
+        $dealSql = "
+            SELECT d.id, d.client_id, d.worker_id, d.order_name, d.details, d.amount, d.status, d.priority, d.next_action_text, d.next_action_date, d.pipeline_stage, d.stage_updated_at, d.expected_date, d.is_archived, d.archived_at, d.created_at
+            FROM deals d
+            LEFT JOIN clients c ON c.id = d.client_id
+        ";
+        $dealWhere = [];
+        $dealParams = [];
 
-    $companyFiles = $pdo->query("
-        SELECT f.id, f.uploaded_by, l.User AS uploaded_by_name, f.file_name, f.stored_name, f.mime_type, f.file_size, f.category, f.created_at
-        FROM company_files f
-        JOIN login l ON l.ID = f.uploaded_by
-        ORDER BY f.id DESC
-    ")->fetchAll();
+        if ($dealSearch !== "") {
+            $dealWhere[] = "(d.order_name LIKE :deal_search OR d.details LIKE :deal_search OR c.name LIKE :deal_search)";
+            $dealParams[":deal_search"] = "%" . $dealSearch . "%";
+        }
+
+        if (in_array($dealStatus, ["new", "in_progress", "won", "lost"], true)) {
+            $dealWhere[] = "d.status = :deal_status";
+            $dealParams[":deal_status"] = $dealStatus;
+        }
+
+        if (!empty($dealWhere)) {
+            $dealSql .= " WHERE " . implode(" AND ", $dealWhere);
+        }
+        $dealSql .= " ORDER BY d.id DESC";
+
+        $stmt = $pdo->prepare($dealSql);
+        $stmt->execute($dealParams);
+        $responseData["deals"] = $stmt->fetchAll();
+    }
+
+    if (should_load_entity($requestedEntities, "attendance")) {
+        if ($attendanceDate !== "") {
+            $stmt = $pdo->prepare("
+                SELECT id, worker_id, work_date, status, overtime_hours, created_at
+                FROM attendance
+                WHERE work_date = :work_date
+                ORDER BY id DESC
+            ");
+            $stmt->execute([":work_date" => $attendanceDate]);
+            $responseData["attendance"] = $stmt->fetchAll();
+        } else {
+            $responseData["attendance"] = $pdo->query("
+                SELECT id, worker_id, work_date, status, overtime_hours, created_at
+                FROM attendance
+                ORDER BY id DESC
+            ")->fetchAll();
+        }
+    }
+
+    if (should_load_entity($requestedEntities, "productions")) {
+        if ($productionDate !== "") {
+            $stmt = $pdo->prepare("
+                SELECT id, product_name, quantity, produced_date, created_at
+                FROM productions
+                WHERE produced_date = :produced_date
+                ORDER BY id DESC
+            ");
+            $stmt->execute([":produced_date" => $productionDate]);
+            $responseData["productions"] = $stmt->fetchAll();
+        } else {
+            $responseData["productions"] = $pdo->query("
+                SELECT id, product_name, quantity, produced_date, created_at
+                FROM productions
+                ORDER BY id DESC
+            ")->fetchAll();
+        }
+    }
+
+    if (should_load_entity($requestedEntities, "calendar_notes")) {
+        $calendarSql = "
+            SELECT id, user_id, note_date, title, description, is_done, created_at
+            FROM calendar_notes
+        ";
+        $calendarParams = [];
+        $calendarWhere = [];
+
+        if ($userId > 0) {
+            $calendarWhere[] = "user_id = :calendar_user_id";
+            $calendarParams[":calendar_user_id"] = $userId;
+        }
+
+        if ($calendarMonth !== "") {
+            [$calendarStart, $calendarEnd] = normalize_month_range($calendarMonth);
+            if ($calendarStart === "" || $calendarEnd === "") {
+                json_response(["ok" => false, "message" => "Некорректный месяц календаря."], 400);
+            }
+            $calendarWhere[] = "note_date BETWEEN :calendar_start AND :calendar_end";
+            $calendarParams[":calendar_start"] = $calendarStart;
+            $calendarParams[":calendar_end"] = $calendarEnd;
+        }
+
+        if (!empty($calendarWhere)) {
+            $calendarSql .= " WHERE " . implode(" AND ", $calendarWhere);
+        }
+        $calendarSql .= " ORDER BY note_date ASC, id DESC";
+
+        $calendarStmt = $pdo->prepare($calendarSql);
+        $calendarStmt->execute($calendarParams);
+        $responseData["calendar_notes"] = $calendarStmt->fetchAll();
+    }
+
+    if (should_load_entity($requestedEntities, "company_files")) {
+        if ($fileSearch !== "") {
+            $stmt = $pdo->prepare("
+                SELECT f.id, f.uploaded_by, l.User AS uploaded_by_name, f.file_name, f.stored_name, f.mime_type, f.file_size, f.category, f.created_at
+                FROM company_files f
+                JOIN login l ON l.ID = f.uploaded_by
+                WHERE f.file_name LIKE :search OR f.category LIKE :search OR f.mime_type LIKE :search
+                ORDER BY f.id DESC
+            ");
+            $stmt->execute([":search" => "%" . $fileSearch . "%"]);
+            $responseData["company_files"] = $stmt->fetchAll();
+        } else {
+            $responseData["company_files"] = $pdo->query("
+                SELECT f.id, f.uploaded_by, l.User AS uploaded_by_name, f.file_name, f.stored_name, f.mime_type, f.file_size, f.category, f.created_at
+                FROM company_files f
+                JOIN login l ON l.ID = f.uploaded_by
+                ORDER BY f.id DESC
+            ")->fetchAll();
+        }
+    }
 
     json_response([
         "ok" => true,
-        "data" => [
-            "clients" => $clients,
-            "workers" => $workers,
-            "deals" => $deals,
-            "attendance" => $attendance,
-            "productions" => $productions,
-            "calendar_notes" => $calendarNotes,
-            "company_files" => $companyFiles,
-        ],
+        "data" => $responseData,
     ]);
 }
 
